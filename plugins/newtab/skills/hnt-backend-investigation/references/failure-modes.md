@@ -6,37 +6,27 @@ seriously.
 
 ## Contents
 
-- Classify the shape first — failure classes and what each looks like on first contact
+- Failure classes — the vocabulary, for checking you have not narrowed too early
 - If it came from an alert, audit the alert
 - Why these failures are silent — the mechanisms that turn a failure into a valid-looking result
 - Falsification moves that work — what to reach for when a story feels too clean
 - Structural gaps to report rather than infer past
 - Invariants to check — hard checks, and the class each one points to
 
-## Classify the shape first
+## Failure classes
 
-The tells below are heuristics for orienting, not proof. Use them to widen the hypothesis list at
-step 3, not to shortcut it.
+Vocabulary, not a lookup. Do not use this list to guess a cause from a symptom; derive the layer from
+what you have measured. It is here so that when your hypothesis list has narrowed to one or two, you
+can check it against the range of things that actually break in this stack:
 
-| Failure class | What you tend to see first |
-|---|---|
-| Vendor extraction-quality defect | Status codes fine and error rate flat, but a content-shape ratio per domain drifts — empty-body share, title length, headline churn |
-| Upstream unavailability | Your own logs contain *nothing*; a per-domain count goes to zero with no errors logged. Visible only in the vendor's own status data |
-| Silent validation rejection | `items_written < items_received`, exit status success, no error raised |
-| Resource exhaustion / capacity cliff | Output stops abruptly and completely, tracking input size or scale rather than time of day |
-| ML model or routing failure | Job succeeded and the aggregate gate passed, while one class's output is zero and its siblings are current |
-| Data-model / identity defect | Counts look normal but the rows are wrong — the same content living under two keys (URL, canonical, slug, external id) |
-| Filter / threshold misconfiguration | The affected population clusters exactly on a boundary value; or a global aggregate breaches while every stratum is fine |
-| Unscoped bulk database operation | An entire entity's row count changes at one timestamp, with nothing thrown |
-| Cascading failure / retry amplification | Outbound attempts per key far above the design rate; error volume scales with fleet size rather than user traffic |
-| Observability defect | The alert's own numbers disagree with an independent measurement of the same thing; the alarm fires while service metrics are healthy |
-| Analytics correctness defect | A derived dimension disagrees with the entity it claims to describe |
-| Dedup failure | Distinct identifiers, identical assets — hash the bytes, not the URL |
-| Authorization defect | Symptom is both user-specific and surface-specific; peers on the same surface are unaffected |
-| Client / product defect | Backend telemetry is normal and the symptom is banded by client version or build |
-| Capacity near-miss | Nothing is broken; the only signal is consumption against a documented quota |
+vendor extraction-quality defect · upstream unavailability · silent validation rejection · resource
+exhaustion or capacity cliff · ML model or routing failure · data-model or identity defect · filter
+or threshold misconfiguration · unscoped bulk database operation · cascading failure or retry
+amplification · observability defect · analytics correctness defect · dedup failure · authorization
+defect · client or product defect · capacity near-miss
 
-The Observability defect row is expanded in the next section.
+Observability defects are expanded in the next section, and the invariants at the end of this file
+name the class each one points to.
 
 A calibration note: symptoms that originate from a monitor's output or from a prevailing worry are
 the ones that most often turn out not to be real, while content a human actually observed usually is.
