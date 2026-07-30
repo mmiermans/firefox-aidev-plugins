@@ -134,8 +134,12 @@ partition column and filter on it, aggregate inside the query rather than pullin
 
 ## BigQuery
 
-Confirm the billing project with a `--dry_run` before the first real query; a personal sandbox is
-usually `moz-fx-dev-<ldap>-sandbox`. If you cannot confirm one, raise it as an access task.
+`bq` ships with the Google Cloud SDK and runs on your `gcloud` credentials, so a missing binary or an
+unauthenticated session is the first thing to rule out, ahead of any dataset permission: `gcloud auth
+list` shows whether there is an active account. The same credentials cover the `gcloud logging` and
+GCS reads below. Confirm the billing project with a `--dry_run` before the first real query; a
+personal sandbox is usually `moz-fx-dev-<ldap>-sandbox`. Anything missing there is an access task, and
+authenticating is interactive so it belongs to the developer.
 
 | Table | What it is for |
 |---|---|
@@ -264,8 +268,10 @@ Each is a short errand: give the developer the command, not a description of the
 | No read-only MySQL login path configured | Set one up, or give you the host and read-only user to configure |
 | AWS SSO session expired | Run `! aws --profile <profile> sso login` in-session, so the output lands here |
 | No AWS profile at all | Say which read-only profile they have, or request one for the account you need |
-| BigQuery permission denied on a dataset | Confirm which billing project to use, or request read access to the dataset |
-| `gcloud` lacks access to a Merino project | Request viewer on the project; say meanwhile whether the question is about payload shape, which stage can answer |
+| `gcloud` or `bq` not installed | Install the Google Cloud SDK, which provides both |
+| `gcloud` installed but not authenticated | Run `! gcloud auth login`, and `! gcloud auth application-default login` as well if you need the Python client libraries |
+| No billing project configured | Name one they can bill, usually `moz-fx-dev-<ldap>-sandbox`, or set it with `gcloud config set project <id>` |
+| Permission denied on a dataset or a Merino project | Request read access, or viewer on the project; say meanwhile whether the question is about payload shape, which stage can answer |
 | Zyte key missing from the environment | Export it in the shell they launched from and restart the session, or run the one extraction you need and paste back the JSON — the JSON, not the key |
 | No `mcp__sentry__` tools at all | Run `! claude mcp add --transport http sentry https://mcp.sentry.dev/mcp`, then `/mcp` to authenticate; the tools appear after a session restart |
 | Sentry connected but unauthenticated or scoped too narrowly | Run `/mcp` and authenticate for the `mozilla` org, or read back the issue's event counts broken down by error message |
