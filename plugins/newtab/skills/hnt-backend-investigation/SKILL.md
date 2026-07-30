@@ -64,6 +64,9 @@ the single number or shape you need, and ask them to read it back.
 
 **Then keep investigating the other hypotheses immediately. Do not wait.**
 
+One standing exception to raising a source only when it looks promising: missing Sentry tools, which
+you flag on sight in step 1.
+
 Restate it exactly once more — whichever comes first: they confirm, the unblocked lines run out, or
 you are three probes into a line you had already judged weaker than the blocked one. That is the
 second and last ask. If there is still no response, finish steps 7 and 8 with `Status: blocked`,
@@ -120,6 +123,12 @@ error floor that never reaches the output is a not-incident; errors flat with ou
 worse than the alert says. When the report is a Sentry alert, resolve it to a concrete error and a
 volume, and decompose the issue by error message before trusting its title or its trend — the
 alert-quality checks are in `references/failure-modes.md`.
+
+**If the `mcp__sentry__` tools are not available, say so before going any further.** Sentry is the
+primary evidence plane for anything error-shaped in this stack, and steps 1, 2 and 6 all read from
+it, so its absence is not a detail to work around quietly. Raise the setup errand on sight rather
+than weighing it against your other lines; `references/data-sources.md` carries the command. Then
+carry on with the planes you do have.
 
 **If you cannot reproduce it, that is a result, not a blocker.** Record the exact attempt — surface,
 locale, time, request, what you saw instead — then switch the question to why the reporter saw it
