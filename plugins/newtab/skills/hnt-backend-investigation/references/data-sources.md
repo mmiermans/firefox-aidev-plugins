@@ -66,10 +66,23 @@ item you trace rather than assuming it.
 
 ## Sentry
 
-Reachable through the Sentry MCP server if one is connected (its tools are prefixed `mcp__sentry__`).
-Prefer the event-search tool over issue-search when you need a volume breakdown by error message —
-issue search alone will not decompose an umbrella fingerprint. If no Sentry tools are present, treat
-it as a blocked source.
+Reachable through the Sentry MCP server (its tools are prefixed `mcp__sentry__`). Prefer the
+event-search tool over issue-search when you need a volume breakdown by error message — issue search
+alone will not decompose an umbrella fingerprint.
+
+**If no `mcp__sentry__` tools are available, the server is not set up in this session, and you should
+say so immediately.** Do not weigh this one against your other lines first; most symptoms here are
+error-shaped, and steps 1, 2 and 6 all read from Sentry, so an investigation without it is working
+half-blind. Raise it as a `DEV:` task with the command:
+
+```
+! claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
+```
+
+followed by `/mcp` to authenticate in the browser. Servers load when a session starts, so the tools
+may not appear until Claude Code is restarted. Keep going meanwhile: service logs and the BigQuery log
+sink cover part of the same ground, and the developer can read event counts off the Sentry web UI for
+you in the interim.
 
 The HNT services are in the **`mozilla`** organisation, prefixed `hnt-`; issue short-ids look like
 `HNT-CRAWL-9`.
@@ -254,7 +267,8 @@ Each is a short errand: give the developer the command, not a description of the
 | BigQuery permission denied on a dataset | Confirm which billing project to use, or request read access to the dataset |
 | `gcloud` lacks access to a Merino project | Request viewer on the project; say meanwhile whether the question is about payload shape, which stage can answer |
 | Zyte key missing from the environment | Export it in the shell they launched from and restart the session, or run the one extraction you need and paste back the JSON — the JSON, not the key |
-| Sentry MCP unavailable or scoped too narrowly | Authenticate the Sentry MCP server for the `mozilla` org, or paste the issue's event counts broken down by error message |
+| No `mcp__sentry__` tools at all | Run `! claude mcp add --transport http sentry https://mcp.sentry.dev/mcp`, then `/mcp` to authenticate; the tools appear after a session restart |
+| Sentry connected but unauthenticated or scoped too narrowly | Run `/mcp` and authenticate for the `mozilla` org, or read back the issue's event counts broken down by error message |
 | Editor-facing symptom needs an authenticated session | Reproduce the click themselves and report the exact error text and time |
 | The answer is in a dashboard you cannot reach | Open it, apply the specific filter you name, and read back the one number or shape you asked for |
 
