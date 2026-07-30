@@ -96,10 +96,9 @@ the same symptom. Say which directory you chose; do not ask.
 
 ## Step 1 — pin down the report
 
-Establish these five facts. Derive what you can — the alert or issue carries the symptom and its
-volume, stratifying the data gives you the surface and locale, a live request tells you whether it
-is still happening. Ask only for what is genuinely undiscoverable, in one batch, and keep working
-while you wait.
+Establish these five facts from the data. The alert or issue carries the symptom and its volume,
+stratifying gives you the surface and locale, and a live request tells you whether it is still
+happening.
 
 | Fact | Why it matters |
 |---|---|
@@ -108,8 +107,6 @@ while you wait.
 | First and last seen, **with timezone** | Anchors the timeline; reports usually arrive late |
 | Surface, locale, section, client version | The stratum is very often the diagnosis |
 | Still happening right now? | Live reproduction vs. historical forensics |
-
-Then confirm it yourself.
 
 **If it is still happening, capture the perishable evidence first** — a live
 `curated-recommendations` request, current logs, current per-section counts — and save the raw
@@ -153,10 +150,10 @@ your own inference. Build that prior yourself before asking for it — most of i
 - **Whether it has happened before** — search Sentry for the same signature, and the service repos'
   GitHub issues.
 
-What is left is genuinely in the developer's head, and it is worth one short, non-blocking ask:
-anything in flight that would not show up in a repo or a dashboard, and whether a postmortem or
-incident register exists for this area. An existing write-up can answer in a paragraph what costs
-hours to reconstruct, so ask early — then carry on without waiting.
+What is left is genuinely in the developer's head: anything in flight that a repo or a dashboard
+would not show, and whether a postmortem or incident register already covers this area. Raise that
+as one short note and carry on without waiting; an existing write-up can answer in a paragraph what
+costs hours to reconstruct.
 
 Record what you derive and what they tell you in FINDINGS.md, keeping the two apart. When a later
 query contradicts the prior, treat your own inference as the suspect first, and say so.
