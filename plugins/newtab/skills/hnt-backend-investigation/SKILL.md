@@ -79,9 +79,25 @@ that was never made.
 
 ## Workspace
 
-One directory holds the whole investigation: `~/investigation/<YYYY>-<mon><DD>-<slug>`, e.g.
-`~/investigation/2026-jul29-empty-de-sections`. Reuse a directory only when its FINDINGS.md is about
-the same symptom. Say which directory you chose; do not ask.
+Each investigation gets its own subdirectory inside one root directory that the developer keeps their
+investigations in. Do not assume where that root is. Establish it in this order:
+
+1. **Look in user memory.** `~/.claude/CLAUDE.md` is where the root is recorded, because it is the
+   only memory scope that applies across every repository you might be launched from. If it names a
+   root, use it and do not ask.
+2. **Otherwise ask, once, before your first write.** Where the developer keeps investigations cannot
+   be derived, and guessing puts files somewhere they did not choose. Ask it as a single question at
+   the start, and run the step-1 probes while you wait rather than idling.
+3. **Then record it.** Append one line to `~/.claude/CLAUDE.md`, creating that file if it does not
+   exist: `Investigations live in <path> (one subdirectory per investigation).` Tell the developer
+   you saved it, so they know they will not be asked again. Auto memory is the wrong home for this:
+   it is keyed to the repository you were launched from, and investigations get started from
+   whichever service repo is to hand.
+
+Then create this investigation's subdirectory inside that root. If the root already holds
+investigations, follow the naming they use; otherwise `<mon><DD>-<slug>`, e.g.
+`jul29-empty-de-sections`. Say which directory you created. Reuse an existing one only when its
+FINDINGS.md is about the same symptom.
 
 - `FINDINGS.md` — one living document. Create it from the step-7 skeleton **before your first
   probe**; steps 2, 4 and 6 write into it as they go, so step 7 is a final pass over a document that
