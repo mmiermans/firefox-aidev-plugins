@@ -54,8 +54,9 @@ pick the sensible option, say which one you picked, and keep going. Ask a blocki
 when proceeding on any assumption would waste the whole investigation.
 
 When a source you cannot reach looks promising, raise it **once** as a pending task carrying the
-whole errand in its own text, prefixed `DEV:` so it reads as theirs rather than yours — e.g.
-`DEV: connect to VPN so corpus MySQL is reachable — settles whether the DE items exist at all`.
+whole errand in its own text, prefixed `User action:` so it reads as theirs rather than yours — e.g.
+`User action: connect to VPN so corpus MySQL is reachable — settles whether the DE items exist at
+all`.
 Give the exact command, not a description of the problem; for an interactive login use the `!`
 in-session form so the output lands here, e.g.
 `! aws --profile <profile-you-found-in-~/.aws/config> sso login`. If the answer lives in a dashboard
@@ -156,7 +157,8 @@ A report relayed from an editor is ambiguous between what editors see in curatio
 what clients see on the surface. Probe both in parallel and state which population you confirmed.
 
 The moment you confirm client-visible impact that is still happening, state it in one line — what,
-how big, since when — and keep investigating.
+how big, since when — and keep investigating. If that deserves a heads-up in `#hnt-dev-be-alerts`,
+follow the posting rule at the end of step 8.
 
 ## Step 2 — establish what "normal" is
 
@@ -172,7 +174,8 @@ your own inference. Build that prior yourself before asking for it — most of i
   model or config artifacts.
 - **Whether this is normally noisy or seasonal** — a trailing profile of the same metric, by day of
   week. Do not ask; compute it.
-- **Whether it has happened before** — search Sentry for the same signature, and the service repos'
+- **Whether it has happened before** — search Sentry for the same signature, recent alerts in
+  `#hnt-dev-be-alerts`, and the service repos'
   GitHub issues.
 
 What is left is genuinely in the developer's head: anything in flight that a repo or a dashboard
@@ -319,3 +322,14 @@ Any telemetry plane you could not reach, and the access that would unblock it.
 - **Leave the follow-up as a task**, owned by whoever will act: confirm the fix shipped and the
   metric actually recovered. State that you have done so rather than asking whether to.
 - Hand back a two-line verdict plus the FINDINGS.md path. Do not paste the document into chat.
+
+### Posting to `#hnt-dev-be-alerts`
+
+Updates worth sharing go to `#hnt-dev-be-alerts`. Search the channel first: if the investigation
+started from an alert or message posted there in the last day or two, reply **in that thread**, so the
+diagnosis stays attached to the alert people already saw. Only start a new thread when nothing recent
+relates.
+
+**Ask before every single message, showing the exact text and where it will go.** Approval for one
+post is not approval for the next, and this is a shared channel colleagues act on. If approval does
+not come, keep the draft in FINDINGS.md and carry on; an unposted update is not a reason to stop.

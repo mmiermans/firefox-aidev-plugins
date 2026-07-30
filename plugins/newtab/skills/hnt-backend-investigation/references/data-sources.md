@@ -7,6 +7,7 @@ Reference for the `hnt-backend-investigation` skill.
 - The pipeline, and which repo owns each stage
 - Vocabulary: surface, locale, section, and the id to trace items by
 - Sentry — projects and the traps in reading them
+- Slack — `#hnt-dev-be-alerts`, as alert history and as where updates go
 - Merino — live requests and GCP projects
 - BigQuery — the tables worth knowing and the traps in reading them
 - Curated corpus MySQL — access and schema shape
@@ -73,10 +74,10 @@ alone will not decompose an umbrella fingerprint.
 **If no `mcp__sentry__` tools are available, the server is not set up in this session, and you should
 say so immediately.** Do not weigh this one against your other lines first; most symptoms here are
 error-shaped, and steps 1, 2 and 6 all read from Sentry, so an investigation without it is working
-half-blind. Raise it as a `DEV:` task with the command:
+half-blind. Raise it as a `User action:` task with the command:
 
 ```
-! claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
+! claude mcp add --scope user --transport http sentry https://mcp.sentry.dev/mcp
 ```
 
 followed by `/mcp` to authenticate in the browser. Servers load when a session starts, so the tools
@@ -105,6 +106,20 @@ Traps:
 - Decompose an issue by error message before trusting its title or trending it.
 - Absence of events is weak evidence: a process that dies at startup, or a job that drops items
   while reporting success, emits nothing.
+
+## Slack
+
+`#hnt-dev-be-alerts` carries the backend alerts for this stack, which makes it two things at once: a
+record of what has already fired, worth searching in step 2 before you conclude something is new, and
+the place investigation updates go. Reachable through the Slack MCP server, whose tools are prefixed
+`mcp__slack__`:
+
+```
+! claude mcp add --scope user --transport http slack https://mcp.slack.com/mcp
+```
+
+Reading it is free. Posting needs the developer's approval for **each** message, and prefers a reply
+in the existing alert thread over a new one: the rule is at the end of step 8 in SKILL.md.
 
 ## Merino
 
@@ -273,8 +288,9 @@ Each is a short errand: give the developer the command, not a description of the
 | No billing project configured | Name one they can bill, usually `moz-fx-dev-<ldap>-sandbox`, or set it with `gcloud config set project <id>` |
 | Permission denied on a dataset or a Merino project | Request read access, or viewer on the project; say meanwhile whether the question is about payload shape, which stage can answer |
 | Zyte key missing from the environment | Create one at https://app.zyte.com/o/612928/zyte-api/api-access, `export ZYTE_API_KEY=<key>` in the shell they launch from, and restart the session. Or have them run the single extraction and paste back the JSON, not the key |
-| No `mcp__sentry__` tools at all | Run `! claude mcp add --transport http sentry https://mcp.sentry.dev/mcp`, then `/mcp` to authenticate; the tools appear after a session restart |
+| No `mcp__sentry__` tools at all | Run `! claude mcp add --scope user --transport http sentry https://mcp.sentry.dev/mcp`, then `/mcp` to authenticate; the tools appear after a session restart |
 | Sentry connected but unauthenticated or scoped too narrowly | Run `/mcp` and authenticate for the `mozilla` org, or read back the issue's event counts broken down by error message |
+| No `mcp__slack__` tools, and an update needs posting | Run `! claude mcp add --scope user --transport http slack https://mcp.slack.com/mcp`, then `/mcp` to authenticate; or post the drafted message to `#hnt-dev-be-alerts` themselves |
 | Editor-facing symptom needs an authenticated session | Reproduce the click themselves and report the exact error text and time |
 | The answer is in a dashboard you cannot reach | Open it, apply the specific filter you name, and read back the one number or shape you asked for |
 
