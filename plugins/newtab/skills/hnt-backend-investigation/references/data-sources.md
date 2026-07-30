@@ -230,8 +230,9 @@ SSO sessions expire and the login is interactive, so it has to be the developer:
 ## Zyte
 
 Two separate APIs, both **metered — every call costs money**. Save all responses; never bulk-crawl to
-satisfy curiosity. Check for a key with `[ -n "$ZYTE_API_KEY" ] && echo present`, and reference it as
-`$ZYTE_API_KEY` in anything you save, so no key is written into a query file or the transcript.
+satisfy curiosity. Check for a key with `[ -n "$ZYTE_API_KEY" ] && echo present`. Keys are created at
+https://app.zyte.com/o/612928/zyte-api/api-access. Reference the key as `$ZYTE_API_KEY` in anything
+you save, so its value never lands in a query file or the transcript.
 
 **Extraction API** (`ZYTE_API_KEY`) reproduces what the crawler saw for a URL. Request `article` for
 a single page or `articleList` for an index page — not both — and put `extractFrom:
@@ -245,9 +246,8 @@ unapproved domains into the corpus.
 
 **Stats API** (`ZYTE_SECRET_KEY`, `https://zyte-api-stats.zyte.com/api/stats`) is the vendor's own
 view of your traffic: per-domain response-code distribution over time. `organization_id` is
-**required** and auth is HTTP basic with the secret key as the username and an empty password, so a
-bare GET on the endpoint fails validation — take the org id from the production caller
-(`scripts/fetch/zyte_stats.py` in `content-ml-services`) rather than guessing. Only `groupby_time`
+**required** and is `612928`; auth is HTTP basic with the secret key as the username and an empty
+password, so a bare GET on the endpoint fails validation. Only `groupby_time`
 and `groupby_domain` group; `response_codes` is a *filter*, not a grouping, and
 `include_domain_health=true` is rejected without `groupby_domain=true`. This is the right source for
 "did this domain start failing, and when" — your own logs will not show it if the pipeline discards
@@ -264,15 +264,15 @@ Each is a short errand: give the developer the command, not a description of the
 
 | Blocked source | Ask them to |
 |---|---|
-| Corpus MySQL hangs rather than erroring | Connect to VPN. If it still hangs, ask whether the read-only login path is still valid |
-| No read-only MySQL login path configured | Set one up, or give you the host and read-only user to configure |
-| AWS SSO session expired | Run `! aws --profile <profile> sso login` in-session, so the output lands here |
-| No AWS profile at all | Say which read-only profile they have, or request one for the account you need |
+| Corpus MySQL hangs rather than erroring | Connect to Mozilla VPN, then say so; if it still hangs the login path itself is stale |
+| No read-only MySQL login path configured | Create one: `mysql_config_editor set --login-path=prod-curated-corpus-api-readonly --host=<host> --user=<user> --password`, and tell you the path name |
+| AWS SSO session expired | Run `! aws --profile <profile> sso login`, so the output lands here |
+| No AWS profile at all | Run `! aws configure sso` for a read-only role, or name a profile already in their `~/.aws/config` |
 | `gcloud` or `bq` not installed | Install the Google Cloud SDK, which provides both |
 | `gcloud` installed but not authenticated | Run `! gcloud auth login`, and `! gcloud auth application-default login` as well if you need the Python client libraries |
 | No billing project configured | Name one they can bill, usually `moz-fx-dev-<ldap>-sandbox`, or set it with `gcloud config set project <id>` |
 | Permission denied on a dataset or a Merino project | Request read access, or viewer on the project; say meanwhile whether the question is about payload shape, which stage can answer |
-| Zyte key missing from the environment | Export it in the shell they launched from and restart the session, or run the one extraction you need and paste back the JSON — the JSON, not the key |
+| Zyte key missing from the environment | Create one at https://app.zyte.com/o/612928/zyte-api/api-access, `export ZYTE_API_KEY=<key>` in the shell they launch from, and restart the session. Or have them run the single extraction and paste back the JSON, not the key |
 | No `mcp__sentry__` tools at all | Run `! claude mcp add --transport http sentry https://mcp.sentry.dev/mcp`, then `/mcp` to authenticate; the tools appear after a session restart |
 | Sentry connected but unauthenticated or scoped too narrowly | Run `/mcp` and authenticate for the `mozilla` org, or read back the issue's event counts broken down by error message |
 | Editor-facing symptom needs an authenticated session | Reproduce the click themselves and report the exact error text and time |
