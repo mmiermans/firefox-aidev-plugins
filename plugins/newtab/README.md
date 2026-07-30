@@ -24,5 +24,6 @@ Use this skill when a Sentry alert fires, an editor reports something broken, or
 - a MySQL client, plus Mozilla VPN
 - `uv` or `python3`
 - the Sentry MCP server
+- the Slack MCP server, for `#hnt-dev-be-alerts`
 
 Anything unreachable is raised as a task and reported under "Could not measure".
