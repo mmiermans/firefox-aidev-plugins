@@ -16,9 +16,9 @@ populations can be affected, and every finding should say which: **Firefox New T
 **How to reach each system, and the traps that will silently give you wrong answers** — read before
 your first probe in step 1: [references/data-sources.md](references/data-sources.md)
 
-**How these systems fail, the invariants to check, and falsification moves that work** — read
-before you enumerate hypotheses in step 3, because it will change which ones you take seriously:
-[references/failure-modes.md](references/failure-modes.md)
+**How these systems fail, the invariants to check, and falsification moves that work** — read when a
+probe comes back empty, when a story starts looking too clean, or when your hypothesis list has
+narrowed to one: [references/failure-modes.md](references/failure-modes.md)
 
 ## How to think about this
 
@@ -158,31 +158,26 @@ costs hours to reconstruct.
 Record what you derive and what they tell you in FINDINGS.md, keeping the two apart. When a later
 query contradicts the prior, treat your own inference as the suspect first, and say so.
 
-## Step 3 — enumerate hypotheses, then probe them in parallel
+## Step 3 — form hypotheses from the data, then probe them in parallel
 
-List every plausible explanation before testing any of them. Widen the list from
-`references/failure-modes.md` — its failure-class tells cover classes the symptom table below does
-not, and "Why these failures are silent" names the mechanisms that make a broken pipeline return a
-valid-looking empty result rather than an error.
+Hypotheses come from what you have already measured, not from a catalogue. Start where step 1 put
+you: the stage whose output is wrong, the stratum that is affected, the moment it changed. Ask what
+could produce exactly that, follow the data one hop upstream, and let each result generate the next
+question. A hypothesis you cannot tie to something you have observed is a guess competing for the
+same probe budget as one you can.
 
-| Symptom | Likely layer | Probe |
-|---|---|---|
-| Recommendations 500 / timeout / stale | Merino, or its upstream corpus API | Sentry + live `curated-recommendations` request |
-| Section empty or short | ML section assembly → corpus → Merino | Active items per section; freshest item timestamp per section |
-| Section missing entirely | Section config / section manager | Section rows for the surface; section-manager errors |
-| Wrong / stale / duplicate items | Corpus content or ranking | Trace one item end to end by `corpusItemId` |
-| Bad title, image, author, date | Crawl + hydration | Compare the stored item against a live re-extraction |
-| Whole publisher or domain absent | Crawl discovery / domain block | Per-domain counts over time, then the vendor's own status data |
-| Errors up, no reported user impact | The erroring stage itself | Assert that stage's output invariant downstream, then decompose the errors |
-| Editor-facing error or lockout | admin-api → corpus API | Sentry for the editor-facing services; reproduce the mutation |
-| Metrics or dashboard wrong | ETL / derived tables | Compare the derived table against its source |
+Work the live ones in parallel rather than serially. Before firing, write beside each hypothesis the
+result that would kill it. Then issue the probes as independent tool calls in a single batch,
+backgrounding anything slow and handing a line that needs several dependent steps to a subagent so
+the batch still returns together. Cap the first wave at four or five cheap, independent probes, and
+hold metered calls and large scans for the second wave. Name each `queries/` and `results/` pair
+after its hypothesis, so a result cannot be attributed to the wrong line.
 
-Before firing, write beside each hypothesis the result that would kill it. Then issue the probes as
-independent tool calls in a single batch, backgrounding anything slow and handing a line that needs
-several dependent steps to a subagent so the batch still returns together. Cap the first wave at
-four or five cheap, independent probes, and hold metered calls and large scans for the second wave.
-Name each `queries/` and `results/` pair after its hypothesis, so a result cannot be attributed to
-the wrong line.
+Then look at what came back and do it again. Each round should either kill a line or sharpen the next
+question; when a round kills everything, the data has moved you upstream rather than left you stuck.
+If you are down to a single surviving hypothesis, that is the moment to check the failure classes and
+silent-failure mechanisms in `references/failure-modes.md` against what you have measured, as a guard
+against having narrowed too early.
 
 Two moves consistently break cases open: **leave the tool you started in** — when a source stops
 yielding, measure the same thing somewhere else, since the failure is often invisible in the plane
