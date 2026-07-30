@@ -1,6 +1,6 @@
 ---
 name: hnt-backend-investigation
-description: Investigates Home New Tab backend errors, outages, and data-quality problems across Merino, the curated corpus, admin-api, the article crawler, and the ML section pipeline. Confirms the symptom independently, probes competing hypotheses in parallel, stratifies metrics, tries to break its own conclusion, then writes an evidence-backed FINDINGS doc naming the check that would have caught it. Use when a Sentry alert fires, an editor reports something broken, or recommendations look empty, wrong, or stale.
+description: Investigates Home New Tab backend errors, outages, and data-quality problems across Merino, the curated corpus, admin-api, the article crawler, and the ML section pipeline. Confirms the symptom independently, probes competing hypotheses in parallel, stratifies metrics, tries to break its own conclusion, then writes an evidence-backed FINDINGS doc with a root cause and quantified impact. Use when a Sentry alert fires, an editor reports something broken, or recommendations look empty, wrong, or stale.
 ---
 
 # New Tab (HNT) Backend Investigation
@@ -9,15 +9,14 @@ Diagnose a problem in the services behind Firefox Home New Tab recommendations �
 curated corpus, admin-api, the article crawler, the ML section pipeline, the data pipelines. Not
 for in-tree `browser/extensions/newtab` frontend bugs.
 
-Your product is a **diagnosis**: a root cause, the evidence for it, the impact quantified, and the
-check that would have caught it earlier. Two populations can be affected, and every finding should
-say which: **Firefox New Tab clients** (everyone who sees recommendations) and **editors/curators**
+Your product is a **diagnosis**: a root cause, the evidence for it, and the impact quantified. Two
+populations can be affected, and every finding should say which: **Firefox New Tab clients** (everyone who sees recommendations) and **editors/curators**
 (the internal editorial team working through curation-admin-tools and admin-api).
 
 **How to reach each system, and the traps that will silently give you wrong answers** — read before
 your first probe in step 1: [references/data-sources.md](references/data-sources.md)
 
-**How these systems fail, the invariants worth asserting, and falsification moves that work** — read
+**How these systems fail, the invariants to check, and falsification moves that work** — read
 before you enumerate hypotheses in step 3, because it will change which ones you take seriously:
 [references/failure-modes.md](references/failure-modes.md)
 
@@ -290,19 +289,12 @@ Rows, requests, users, hours, locales. A number, or an explicit "unquantified be
 The change as a diff in this document, at file-and-line where you can get there, produced by
 reading the clones.
 
-## Detection gap
-The check that would have caught this: the metric or invariant, its threshold shape, where it
-would run, and why it does not already exist.
-
 ## Could not measure
 Any telemetry plane you could not reach, and the access that would unblock it.
 ```
 
 ## Step 8 — close the loop
 
-- **Name the detection gap.** Time-to-detect dominates time-to-diagnose in this system; a check
-  that fires is worth more than a faster diagnosis. `references/failure-modes.md` lists the
-  invariants worth asserting — propose the one that fits, and say where it should live.
 - **Report what you could not reach.** Missing dashboard, IAM, token, or VPN access is a finding,
   not an inconvenience to route around. Leave any unresolved access task on the list rather than
   clearing it.

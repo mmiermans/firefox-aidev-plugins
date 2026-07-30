@@ -1,8 +1,8 @@
 # How New Tab (HNT) backend failures behave
 
 Reference for the `hnt-backend-investigation` skill: the shapes these failures take, the invariants
-worth asserting, and the moves that kill a wrong hypothesis. Read this before you take any
-hypothesis seriously.
+to check, and the moves that kill a wrong hypothesis. Read this before you take any hypothesis
+seriously.
 
 ## Contents
 
@@ -11,7 +11,7 @@ hypothesis seriously.
 - Why these failures are silent — the mechanisms that turn a failure into a valid-looking result
 - Falsification moves that work — what to reach for when a story feels too clean
 - Structural gaps to report rather than infer past
-- Invariants worth asserting — hard checks, and the class each one detects
+- Invariants to check — hard checks, and the class each one points to
 
 ## Classify the shape first
 
@@ -119,13 +119,13 @@ These make certain questions unanswerable from stored data alone. When one block
 - No status code or extraction-probability stored alongside cached hydration results, so a stored row
   does not imply a successful extraction.
 
-## Invariants worth asserting
+## Invariants to check
 
-Hard equalities and floors rather than statistical thresholds, so they fire with near-zero false
-positives. When you finish an investigation, propose the one that fits — or add a new one shaped like
-these.
+Hard equalities and floors rather than statistical thresholds, so a violation is unambiguous rather
+than a matter of degree. Assert the ones that bear on your hypotheses against the data: a broken one
+localises the fault immediately, and a holding one eliminates a line cheaply.
 
-| Invariant | Class it detects |
+| Invariant | Class it points to |
 |---|---|
 | Articles/hour > 0 per surface **per source**, judged against that surface's own mix | Upstream unavailability; capacity cliff |
 | Active items per fixed-size section == configured N | Silent validation rejection; model failure |
