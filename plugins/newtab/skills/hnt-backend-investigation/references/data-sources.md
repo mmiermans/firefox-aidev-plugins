@@ -2,6 +2,15 @@
 
 Reference for the `hnt-backend-investigation` skill.
 
+Write your own queries: this file gives you the shape of the data and the traps, not canned SQL.
+Access varies by developer. Verify a source is reachable before building a plan around it, and if it
+is not, follow "Don't stall on the developer" in SKILL.md — raise it once as a task and keep
+investigating, rather than stopping or silently substituting a weaker source.
+
+If you are editing this file later: it holds non-derivable access facts and traps that silently
+produce wrong answers. Worked incidents, current issue ids, canned queries, and symptom-to-cause
+lookups belong nowhere in this skill.
+
 ## Contents
 
 - The features behind the page, and where to look for one this file does not name
@@ -14,15 +23,6 @@ Reference for the `hnt-backend-investigation` skill.
 - **Crossword puzzle of the day** — the vendor mirror, and the two manifests that date it
 - **Access requests** — the one-line ask for each gated source
 
-Write your own queries: this file gives you the shape of the data and the traps, not canned SQL.
-Access varies by developer. Verify a source is reachable before building a plan around it, and if it
-is not, follow "Don't stall on the developer" in SKILL.md — raise it once as a task and keep
-investigating, rather than stopping or silently substituting a weaker source.
-
-If you are editing this file later: it holds non-derivable access facts and traps that silently
-produce wrong answers. Worked incidents, current issue ids, canned queries, and symptom-to-cause
-lookups belong nowhere in this skill.
-
 ## The features behind the page
 
 New Tab is assembled from features that are served separately and fail separately, so place the
@@ -33,9 +33,12 @@ that feature has by far the most moving parts. For anything else, find its provi
 `merino/providers/`, its config block in `merino/configs/default.toml`, and read
 `merino/web/api_v1.py` as the index of what Merino serves New Tab.
 
-Locate clones rather than assuming paths:
-`find ~ -maxdepth 3 -type d -name .git -print0 2>/dev/null | xargs -0 -n1 dirname`. For a repo that
-is not cloned, read it through `gh api` or `gh search code`.
+Every path in this file is relative to a service repo, and the repos are listed under Content
+recommendations below. Check for a clone at the obvious spot only, `ls -d ~/<repo-name>`, and read
+anything missing through `gh api` or `gh search code`, which needs no clone: for one or two files that
+is faster than cloning anyway. Do not go scanning the filesystem for a checkout. If repeated source
+reading is genuinely slowing the investigation, that is the point to raise a `User action:` task
+asking where the repo lives or for a fresh clone.
 
 ## Sentry
 
@@ -176,10 +179,6 @@ environment, and the dev constant beside it is unused — so stage Merino reads 
 | `bigquery-etl` | mozilla/bigquery-etl | New Tab engagement and Merino export ETL, and the Airflow DAGs behind it |
 | `serverless-image-cache` | Pocket/serverless-image-cache | Thumbor image resize and cache |
 | `firefox` | mozilla-firefox/firefox | Client side of the contract (`browser/extensions/newtab`) |
-
-Locate clones rather than assuming paths:
-`find ~ -maxdepth 3 -type d -name .git -print0 2>/dev/null | xargs -0 -n1 dirname`. For a repo that
-is not cloned, read it through `gh api` or `gh search code`.
 
 ### Vocabulary: surface, locale, section, assembly
 
