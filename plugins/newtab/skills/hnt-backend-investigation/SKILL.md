@@ -1,28 +1,27 @@
 ---
 name: hnt-backend-investigation
-description: Investigates Home New Tab backend errors, outages, and data-quality problems across Merino, the curated corpus, admin-api, the article crawler, the ML section pipeline, and the New Tab data pipelines. Confirms the symptom independently, probes competing hypotheses in parallel, stratifies metrics, tries to break its own conclusion, then writes an evidence-backed FINDINGS doc with a root cause and quantified impact. Use when a Sentry alert fires, an editor reports something broken, or recommendations look empty, wrong, or stale. For backend investigation, not in-tree browser/extensions/newtab frontend work.
+description: Investigates Home New Tab backend errors, outages, and data-quality problems in whichever New Tab feature the symptom lands in: content recommendations (Merino, the curated corpus, admin-api, the article crawler, the ML section pipeline, the New Tab data pipelines), Picture of the Day, the daily crossword, or a feature not named here. Confirms the symptom independently, probes competing hypotheses in parallel, stratifies metrics, tries to break its own conclusion, then writes an evidence-backed FINDINGS doc with a root cause and quantified impact. Use when a Sentry alert fires, an editor reports something broken, or a New Tab feature looks empty, wrong, or stale — recommendations, the picture of the day, the puzzle. For backend investigation, not in-tree browser/extensions/newtab frontend work.
 ---
 
 # New Tab (HNT) Backend Investigation
 
-Diagnose a problem in the services behind Firefox Home New Tab recommendations — Merino, the
-curated corpus, admin-api, the article crawler, the ML section pipeline, the data pipelines. Not
-for in-tree `browser/extensions/newtab` frontend bugs.
+Diagnose a problem in the backend services behind Firefox Home New Tab. The page is assembled from
+features that are served separately and fail separately — content recommendations (Merino, the
+curated corpus, admin-api, the article crawler, the ML section pipeline, the data pipelines),
+Picture of the Day, the daily crossword — so establish which one the symptom belongs to before
+probing. A New Tab feature with no notes in this skill is still yours to diagnose: work it the same
+way, from the Merino provider and config that serve it. Not for in-tree `browser/extensions/newtab`
+frontend bugs, and not for Merino's non-New-Tab consumers such as Firefox Suggest.
 
 Your product is a **diagnosis**: a root cause, the evidence for it, and the impact quantified. Two
-populations can be affected, and every finding should say which: **Firefox New Tab clients** (everyone who sees recommendations) and **editors/curators**
-(the internal editorial team working through curation-admin-tools and admin-api).
+populations can be affected, and every finding should say which: **Firefox New Tab clients**
+(everyone the affected feature reaches) and, where the feature has one, the **editors/curators**
+working through curation-admin-tools and admin-api.
 
-**How to reach each system, and the traps that will silently give you wrong answers** — read before
-your first probe in step 1: [references/data-sources.md](references/data-sources.md)
-
-**How these systems fail, the invariants to check, and falsification moves that work** — read when a
-probe comes back empty, when a story starts looking too clean, or when your hypothesis list has
-narrowed to one: [references/failure-modes.md](references/failure-modes.md)
+Access and traps, per system: [references/data-sources.md](references/data-sources.md)
+Failure mechanisms, invariants, falsification moves: [references/failure-modes.md](references/failure-modes.md)
 
 ## How to think about this
-
-Four habits do most of the work. They matter more than any specific query below.
 
 **Confirm the symptom before explaining it.** Independently reproduce or measure the reported
 problem first, whatever its source. An alert can be miscalibrated, mis-scoped, or watching the
@@ -127,20 +126,21 @@ happening.
 
 | Fact | Why it matters |
 |---|---|
-| Exact symptom, verbatim | "Empty section" and "wrong items in section" have disjoint causes |
+| Exact symptom, verbatim, and which feature | "Empty section" and "wrong items in section" have disjoint causes |
 | Who noticed, and how | Alert / editor report / spotted by hand — sets what evidence exists |
 | First and last seen, **with timezone** | Anchors the timeline; reports usually arrive late |
-| Surface, locale, section, client version | The stratum is very often the diagnosis |
+| The stratum — surface, locale, section, client version, or for a daily artifact the date | The stratum is very often the diagnosis |
 | Still happening right now? | Live reproduction vs. historical forensics |
 
-**If it is still happening, capture the perishable evidence first** — a live
-`curated-recommendations` request, current logs, current per-section counts — and save the raw
-responses under `api_responses/`. Build the step-2 prior while those probes are in flight; history
+**If it is still happening, capture the perishable evidence first** — a live request for the feature,
+current logs, and whatever counts or artifact it publishes — and save the raw responses under
+`api_responses/`. Build the step-2 prior while those probes are in flight; history
 keeps, live signal does not.
 
 **An error-rate signal is not yet a symptom.** Measure the erroring stage's *output* to fix the
-blast radius — items per section and freshest item timestamp per surface for assembly, a live Merino
-request for anything client-facing — so you can say whether Firefox clients are affected at all. An
+blast radius — items per section and per-surface freshness for assembly, the newest object under a
+dated prefix for a publish job, a live Merino request for anything client-facing — so you can say
+whether Firefox clients are affected at all. An
 error floor that never reaches the output is a not-incident; errors flat with output at zero is
 worse than the alert says. When the report is a Sentry alert, resolve it to a concrete error and a
 volume, and decompose the issue by error message before trusting its title or its trend — the
@@ -170,11 +170,11 @@ follow the posting rule at the end of step 8.
 You do not know what is currently normal in this system, so you have no basis on which to reject
 your own inference. Build that prior yourself before asking for it — most of it is in reach:
 
-- **Which surfaces are serving** — surfaces present and not disabled in the section data, or a live
-  Merino request for the locale in question.
-- **Whether the crawl is feeding them** — per-surface, per-source volume over the last day from the
-  crawl data. These two sets differ, and a crawled surface with no sections is not automatically a
-  bug.
+- **What the serving path returns now** — a live request for the feature; for recommendations, the
+  surfaces present and not disabled in the section data.
+- **What the producer last wrote** — per-surface, per-source crawl volume over the last day for
+  recommendations, the newest object under the dated bucket prefix for a publish job. Producer and
+  serving sets differ, and a crawled surface with no sections is not automatically a bug.
 - **What shipped recently** — recent commits in the service repos, releases in Sentry, timestamps on
   model or config artifacts.
 - **Whether this is normally noisy or seasonal** — a trailing profile of the same metric, by day of
@@ -238,10 +238,11 @@ An explicit `timestamp (UTC) | observation | source` table.
 
 ## Step 5 — stratify before concluding anything
 
-An aggregate that looks fine is the normal way these problems hide. Slice every metric by
-**domain, locale, region, surface, section, experiment branch, and client/addon version**, and look
-for a single stratum at zero or down sharply against its own trailing median rather than against
-yesterday. When the report says "some users" with no stratum attached, treat experiment branch,
+An aggregate that looks fine is the normal way these problems hide. Slice every metric by the
+dimensions the feature actually has — for recommendations **domain, locale, region, surface, section,
+experiment branch, and client/addon version**, for a once-a-day global artifact barely more than the
+date — and look for a single stratum at zero or down sharply against its own trailing median rather
+than against yesterday. When the report says "some users" with no stratum attached, treat experiment branch,
 region, and rollout state as the first cuts — some surfaces are reachable only through experiment
 enrolment, so an enrolled/unenrolled split is invisible to a locale slice.
 
@@ -283,7 +284,7 @@ they stop the next person re-running them.
 ## Step 7 — write FINDINGS.md
 
 ```markdown
-# <symptom> — investigation
+# <feature>: <symptom> — investigation
 
 **Status:** investigating | root cause identified | blocked
 **Incident type:** outage | degradation | data-quality defect | user-facing bug | near-miss | not-incident
@@ -297,8 +298,8 @@ Three sentences: what broke, since when, what the user-visible effect is.
 | Time | Observation | Source |
 
 ## Prior
-**Derived** — per-surface volumes, recent deploys and model artifacts, trailing profile, prior
-occurrences. Each with the query or link.
+**Derived** — the feature's own volumes or published artifacts, recent deploys and model artifacts,
+trailing profile, prior occurrences. Each with the query or link.
 **Reported** — verbatim answers from the developer, or `asked <time UTC>, no answer received`.
 
 ## Evidence

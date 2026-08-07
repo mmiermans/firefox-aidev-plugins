@@ -27,7 +27,7 @@ vendor extraction-quality defect · upstream unavailability · silent validation
 exhaustion or capacity cliff · ML model or routing failure · data-model or identity defect · filter
 or threshold misconfiguration · unscoped bulk database operation · cascading failure or retry
 amplification · observability defect · analytics correctness defect · dedup failure · authorization
-defect · client or product defect · capacity near-miss
+defect · publication or promotion failure · client or product defect · capacity near-miss
 
 Observability defects are expanded in the next section, and the invariants at the end of this file
 name the class each one points to.
@@ -66,6 +66,10 @@ gets converted into a valid-looking empty or partial result. Expect these:
 - A cache serving stale content on upstream failure and extending its own expiry, so an outage
   upstream reaches clients as a successful response with old data.
 - An aggregate quality gate passing while one class collapses beneath it.
+- A publish that writes one success marker for two parts, so a part that failed beside a part that
+  succeeded reads as current and is never retried.
+- A job whose success value means "something changed", so an ordinary no-change run and a failed run
+  report identically.
 - An alarm that treats missing data as "missing" rather than as a breach, sitting against an emitter
   that publishes nothing at zero — so it goes *quiet* during a total stop.
 
@@ -115,6 +119,8 @@ These make certain questions unanswerable from stored data alone. When one block
 - No lifecycle metadata or tombstones on the crawl target list, so an intentional retirement is
   indistinguishable from an outage.
 - No persisted ML filter funnel, so per-stage drop-off cannot be reconstructed afterwards.
+- No run history for the daily publish jobs beyond a log line and the dated objects they leave, so
+  whether today's run happened is inferred from its output.
 - No queryable deployment history. The running revision is available per service — Merino's
   `/__version__`, the lambdas' `GIT_SHA` — but there is no log of past deploys to line a timeline up
   against, so correlate against the current revision and the repo history instead.
@@ -138,6 +144,8 @@ Hard:
 | A derived dimension agrees with the entity it describes | Analytics correctness defect |
 | The alarm itself emits a value at zero rather than nothing | Observability defect |
 | Consumption against documented quota | Capacity near-miss |
+| A once-a-day artifact's own date == today (UTC) wherever it is served | Publication or promotion failure |
+| The version a serving copy advertises == the version its producer last published | Publication or promotion failure |
 
 Relative to the stratum's own trailing behaviour:
 

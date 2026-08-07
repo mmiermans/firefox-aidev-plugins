@@ -12,9 +12,9 @@ Use this skill when adding cleanup comments to Nova-related changes. See [`skill
 
 ### `hnt-backend-investigation`
 
-Diagnostic workflow for Home New Tab **backend** incidents, covering Merino, the curated corpus, admin-api, the article crawler, the ML section pipeline, and the New Tab data pipelines. Its output is an evidence-backed `FINDINGS.md` carrying a root cause and quantified impact.
+Diagnostic workflow for Home New Tab **backend** incidents, feature by feature: content recommendations (Merino, the curated corpus, admin-api, the article crawler, the ML section pipeline, the New Tab data pipelines), Picture of the Day, the daily crossword, and other New Tab features served the same way. Its output is an evidence-backed `FINDINGS.md` carrying a root cause and quantified impact.
 
-Use this skill when a Sentry alert fires, an editor reports something broken, or recommendations look empty, wrong, or stale. See [`skills/hnt-backend-investigation/SKILL.md`](skills/hnt-backend-investigation/SKILL.md) for details.
+Use this skill when a Sentry alert fires, an editor reports something broken, or a New Tab feature looks empty, wrong, or stale. See [`skills/hnt-backend-investigation/SKILL.md`](skills/hnt-backend-investigation/SKILL.md) for details.
 
 **Optional tools.** Anything unreachable is raised as a task and reported under "Could not measure":
 
