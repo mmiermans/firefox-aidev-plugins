@@ -1,8 +1,12 @@
 # How New Tab (HNT) backend failures behave
 
 Reference for the `hnt-backend-investigation` skill: the shapes these failures take, the invariants
-to check, and the moves that kill a wrong hypothesis. Read this before you take any hypothesis
-seriously.
+to check, and the moves that kill a wrong hypothesis. SKILL.md names the moments to read it; the
+alert audit below applies as soon as a report comes from an alert.
+
+If you are editing this file later: it holds generalised mechanisms and techniques. It is deliberately
+not a symptom-to-cause lookup, and it deliberately carries no worked incidents, issue ids, or canned
+queries. Adding any of those changes what the file is for.
 
 ## Contents
 
@@ -11,7 +15,7 @@ seriously.
 - Why these failures are silent — the mechanisms that turn a failure into a valid-looking result
 - Falsification moves that work — what to reach for when a story feels too clean
 - Structural gaps to report rather than infer past
-- Invariants to check — hard checks, and the class each one points to
+- Invariants to check — the hard ones, the ones relative to a stratum's own history, and the class each points to
 
 ## Failure classes
 
@@ -28,11 +32,6 @@ defect · client or product defect · capacity near-miss
 Observability defects are expanded in the next section, and the invariants at the end of this file
 name the class each one points to.
 
-A calibration note: symptoms that originate from a monitor's output or from a prevailing worry are
-the ones that most often turn out not to be real, while content a human actually observed usually is.
-This is a reason to confirm the signal independently in both directions, not a reason to dismiss
-either.
-
 ## If it came from an alert, audit the alert
 
 Alert quality is its own failure class, and worth a few minutes before chasing the system. This is an
@@ -46,7 +45,8 @@ addition to confirming the symptom independently, not a substitute for it.
   margins under a percent, mean the band, not the system.
 - **Counting artefact** — a panel that counts per open period rather than per calendar day can be off
   by an order of magnitude.
-- **Unroutable** — if you cannot tell prod from staging at a glance, fix that first.
+- **Unroutable** — if you cannot tell prod from staging from the alert alone, establish which one it
+  is before reading anything else into it.
 
 ## Why these failures are silent
 
@@ -61,6 +61,10 @@ gets converted into a valid-looking empty or partial result. Expect these:
 - An `INNER JOIN` against a frozen upstream catalog shedding rows quietly instead of failing.
 - A process that dies during startup, which emits no error event at all.
 - A bulk write with no row-count guard.
+- A write path disabled by a config flag, so the job runs, returns normally, and writes nothing.
+- A queued handoff backing up or dead-lettering, which looks identical to the producer sending nothing.
+- A cache serving stale content on upstream failure and extending its own expiry, so an outage
+  upstream reaches clients as a successful response with old data.
 - An aggregate quality gate passing while one class collapses beneath it.
 - An alarm that treats missing data as "missing" rather than as a breach, sitting against an emitter
   that publishes nothing at zero — so it goes *quiet* during a total stop.
@@ -88,6 +92,12 @@ too clean.
   limit.
 - **Go to the other side's telemetry.** A vendor's or upstream's own status data will show what your
   logs structurally cannot.
+- **Measure the same thing in a different plane.** Each plane here is blind in a particular way, and
+  the pairs are what break structurally-invisible cases: Sentry sees only what was raised, while
+  CloudWatch Logs Insights sees every operation including the ones that failed quietly; the BigQuery
+  log sink sees requests the logging API will not surface; the vendor's stats see the responses your
+  own pipeline discarded before logging them; client telemetry sees what users got when every backend
+  table looks healthy.
 - **Compare against sibling strata** at the same layer — the healthy peers localise the fault faster
   than reading code does.
 - **Design a canary that would falsify** the hypothesis rather than a test that would confirm it.
@@ -105,32 +115,48 @@ These make certain questions unanswerable from stored data alone. When one block
 - No lifecycle metadata or tombstones on the crawl target list, so an intentional retirement is
   indistinguishable from an outage.
 - No persisted ML filter funnel, so per-stage drop-off cannot be reconstructed afterwards.
-- No queryable deployment history to line a timeline up against.
+- No queryable deployment history. The running revision is available per service — Merino's
+  `/__version__`, the lambdas' `GIT_SHA` — but there is no log of past deploys to line a timeline up
+  against, so correlate against the current revision and the repo history instead.
 - No status code or extraction-probability stored alongside cached hydration results, so a stored row
   does not imply a successful extraction.
 
 ## Invariants to check
 
-Hard equalities and floors rather than statistical thresholds, so a violation is unambiguous rather
-than a matter of degree. Assert the ones that bear on your hypotheses against the data: a broken one
-localises the fault immediately, and a holding one eliminates a line cheaply.
+Checks worth asserting against the data when they bear on your hypotheses: a broken one narrows the
+search, and a holding one eliminates a line cheaply. Read the two groups differently. The first group
+is a hard equality or a structural fact, so a violation means something is wrong. The second group is
+relative to the stratum's own history, so a violation means *look here*, not *this is the fault* —
+healthy production violates a naive absolute version of every one of them.
+
+Hard:
 
 | Invariant | Class it points to |
 |---|---|
-| Articles/hour > 0 per surface **per source**, judged against that surface's own mix | Upstream unavailability; capacity cliff |
-| Active items per fixed-size section == configured N | Silent validation rejection; model failure |
-| `items_written == items_received` per job invocation | Silent validation rejection |
-| Input-validation reject rate == 0 | Silent validation rejection |
-| Newest active item age per section within that surface's assembly interval | Model or routing failure; capacity cliff |
-| Vendor non-2xx share per domain below a floor | Upstream unavailability; extraction defect |
-| Content-shape ratio per domain within bounds (empty-body %, title length) | Extraction-quality defect |
-| Per-domain funnel positive at every stage: discovered → hydrated → approved | Upstream unavailability; filter misconfiguration |
-| Canonical domain ∈ approved list | Data-model / identity defect |
-| Per-class model recall above a floor before publish | Model or routing failure |
-| Row-count delta on key tables within bounds | Unscoped bulk operation |
-| Every bound parameter in shared SQL supplied by every caller | Analytics correctness |
-| Consumption below documented quota, alerting on the ratio | Capacity near-miss |
-| The alarm itself emits a value at zero | Observability defect |
+| Canonical domain ∈ approved list | Data-model or identity defect |
+| Every bound parameter in shared SQL supplied by every caller | Analytics correctness defect |
+| A derived dimension agrees with the entity it describes | Analytics correctness defect |
+| The alarm itself emits a value at zero rather than nothing | Observability defect |
+| Consumption against documented quota | Capacity near-miss |
+
+Relative to the stratum's own trailing behaviour:
+
+| Check | Class it points to |
+|---|---|
+| Articles per **day** > 0 per surface per source, plus the hourly count inside that stratum's own trailing range. An hour at zero is normal for low-volume strata and for a newly launched surface | Upstream unavailability; resource exhaustion or capacity cliff |
+| Items served per section against that section's trailing count. There is no single configured size — the served count varies by layout and by request, so do not assert an equality | Silent validation rejection; ML model or routing failure |
+| `items_written` against the job's own trailing ratio, not against `items_received`. Pipelines here dedupe by design, so a healthy ratio is far below one | Silent validation rejection |
+| Input-validation reject count against its trailing floor. A steady non-zero floor is normal for third-party content; a step change is not | Silent validation rejection |
+| Newest active item age per section against that surface's assembly interval | ML model or routing failure; resource exhaustion or capacity cliff |
+| Vendor non-2xx share per domain below a **ceiling** | Upstream unavailability; vendor extraction-quality defect |
+| Content-shape ratio per domain within bounds (empty-body share, title length) | Vendor extraction-quality defect |
+| Per-domain funnel positive at every stage: discovered → hydrated → approved | Upstream unavailability; filter or threshold misconfiguration |
+| Row-count delta on key tables within bounds | Unscoped bulk database operation |
+| Queue depth, oldest-message age and dead-letter depth against their trailing values | Resource exhaustion or capacity cliff; silent validation rejection |
+
+For the relative group, name the plane you measured in: Cloud Logging or the BigQuery log sink for the
+crawl and the GCP jobs, CloudWatch Logs Insights for the AWS lambdas, and client telemetry for anything
+expressed in users.
 
 Stratify anything you assert. A rule that holds globally can be false for one surface, because the
 surfaces do not all draw content the same way.

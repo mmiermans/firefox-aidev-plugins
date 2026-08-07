@@ -1,6 +1,6 @@
 ---
 name: hnt-backend-investigation
-description: Investigates Home New Tab backend errors, outages, and data-quality problems across Merino, the curated corpus, admin-api, the article crawler, and the ML section pipeline. Confirms the symptom independently, probes competing hypotheses in parallel, stratifies metrics, tries to break its own conclusion, then writes an evidence-backed FINDINGS doc with a root cause and quantified impact. Use when a Sentry alert fires, an editor reports something broken, or recommendations look empty, wrong, or stale.
+description: Investigates Home New Tab backend errors, outages, and data-quality problems across Merino, the curated corpus, admin-api, the article crawler, the ML section pipeline, and the New Tab data pipelines. Confirms the symptom independently, probes competing hypotheses in parallel, stratifies metrics, tries to break its own conclusion, then writes an evidence-backed FINDINGS doc with a root cause and quantified impact. Use when a Sentry alert fires, an editor reports something broken, or recommendations look empty, wrong, or stale. For backend investigation, not in-tree browser/extensions/newtab frontend work.
 ---
 
 # New Tab (HNT) Backend Investigation
@@ -37,8 +37,8 @@ query paired with a wrong inference, stated confidently.
 **Work several lines at once.** When more than one explanation is plausible, probe them in parallel
 rather than following the most attractive one to its end. Breadth is cheap in the unmetered planes —
 Sentry, repo reads, CloudWatch alarm history, one live Merino request — and tunnel vision is the
-expensive failure. It is not free in BigQuery or Zyte: dry-run and select narrow columns before you
-fan out. Keep a list of every line you considered and record which you dropped and why.
+expensive failure. It is not free in BigQuery, Zyte, or CloudWatch Logs Insights: dry-run, narrow the
+columns, and narrow the window before you fan out. Keep a list of every line you considered and record which you dropped and why.
 
 **Prefer measuring to reasoning.** Reproduce the request. Run the model on real inputs. Count the
 actual rows. Read the code path instead of assuming its behaviour. A plausible mechanism becomes a
@@ -68,9 +68,9 @@ the single number or shape you need, and ask them to read it back.
 One standing exception to raising a source only when it looks promising: missing Sentry tools, which
 you flag on sight in step 1.
 
-Restate it exactly once more — whichever comes first: they confirm, the unblocked lines run out, or
-you are three probes into a line you had already judged weaker than the blocked one. That is the
-second and last ask. If there is still no response, finish steps 7 and 8 with `Status: blocked`,
+Restate it exactly once more — whichever comes first: the unblocked lines run out, or you are three
+probes into a line you had already judged weaker than the blocked one. That is the second and last
+ask, and it does not apply if they have already answered. If there is still no response, finish steps 7 and 8 with `Status: blocked`,
 name the one unblock under "Could not measure", and leave the access task pending.
 
 Stopping outright is a last resort: only when the blocked source is the only thing that can settle
@@ -100,9 +100,11 @@ investigations, follow the naming they use; otherwise `<mon><DD>-<slug>`, e.g.
 `jul29-empty-de-sections`. Say which directory you created. Reuse an existing one only when its
 FINDINGS.md is about the same symptom.
 
-- `FINDINGS.md` — one living document. Create it from the step-7 skeleton **before your first
-  probe**; steps 2, 4 and 6 write into it as they go, so step 7 is a final pass over a document that
-  already exists. Rewrite it in place, not as `FINDINGS-v2.md`.
+- `FINDINGS.md` — one living document. Create it from the step-7 skeleton the moment the directory
+  exists, and in any case before you write a conclusion down; steps 2 through 6 write into it as they
+  go, so step 7 is a final pass over a document that already exists. If you are still waiting on the
+  root, run the step-1 probes anyway and hold their output until you have somewhere to put it. Rewrite
+  it in place, not as `FINDINGS-v2.md`.
 - `queries/` and `results/` — every query as a file, its output alongside under the same basename.
 - `api_responses/` — raw JSON from live calls. Save them even when they look boring; metered APIs
   cost money to re-hit and the data may be gone tomorrow.
@@ -115,6 +117,9 @@ FINDINGS.md is about the same symptom.
   otherwise `python3 -m venv`.
 
 ## Step 1 — pin down the report
+
+Before your first probe, read [references/data-sources.md](references/data-sources.md). It carries the
+traps that silently return wrong answers, and several of them look like an outage.
 
 Establish these five facts from the data. The alert or issue carries the symptom and its volume,
 stratifying gives you the surface and locale, and a live request tells you whether it is still
@@ -175,8 +180,9 @@ your own inference. Build that prior yourself before asking for it — most of i
 - **Whether this is normally noisy or seasonal** — a trailing profile of the same metric, by day of
   week. Do not ask; compute it.
 - **Whether it has happened before** — search Sentry for the same signature, recent alerts in
-  `#hnt-dev-be-alerts`, and the service repos'
-  GitHub issues.
+  `#hnt-dev-be-alerts`, and the service repos' GitHub issues. Where one of those is unreachable, record
+  it as unchecked rather than empty; "nothing similar has fired" is a claim about a channel you actually
+  read.
 
 What is left is genuinely in the developer's head: anything in flight that a repo or a dashboard
 would not show, and whether a postmortem or incident register already covers this area. Raise that
@@ -225,6 +231,10 @@ An explicit `timestamp (UTC) | observation | source` table.
 - Line the window up against the deploys and config changes from step 2.
 - Treat retention limits as limits: a "first seen" date can be the edge of a retention window rather
   than onset. See `references/data-sources.md`.
+- **The scheduling layer is not in UTC.** Scheduled dates and the assembly crons run in each surface's
+  own timezone, so a UTC comparison invents a one-day gap for part of every day on any surface offset
+  from UTC — worst for the Americas, and `en-US` is the largest surface. Convert per surface, and say
+  which timezone you used.
 
 ## Step 5 — stratify before concluding anything
 
@@ -276,8 +286,8 @@ they stop the next person re-running them.
 # <symptom> — investigation
 
 **Status:** investigating | root cause identified | blocked
-**Class:** outage | degradation | data-quality defect | user-facing bug | near-miss | not-incident
-**Severity:** critical | high | medium | low
+**Incident type:** outage | degradation | data-quality defect | user-facing bug | near-miss | not-incident
+**Severity:** critical | high | medium | low — anchored to the magnitude below, not chosen by feel
 **Affected:** Firefox clients | editors | both — with a magnitude, not an adjective
 
 ## Summary

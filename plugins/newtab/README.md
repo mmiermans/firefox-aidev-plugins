@@ -12,11 +12,11 @@ Use this skill when adding cleanup comments to Nova-related changes. See [`skill
 
 ### `hnt-backend-investigation`
 
-Diagnostic workflow for Home New Tab **backend** incidents, covering Merino, the curated corpus, admin-api, the article crawler, and the ML section pipeline. Its output is an evidence-backed `FINDINGS.md` carrying a root cause and quantified impact.
+Diagnostic workflow for Home New Tab **backend** incidents, covering Merino, the curated corpus, admin-api, the article crawler, the ML section pipeline, and the New Tab data pipelines. Its output is an evidence-backed `FINDINGS.md` carrying a root cause and quantified impact.
 
 Use this skill when a Sentry alert fires, an editor reports something broken, or recommendations look empty, wrong, or stale. See [`skills/hnt-backend-investigation/SKILL.md`](skills/hnt-backend-investigation/SKILL.md) for details.
 
-**Optional tools:**
+**Optional tools.** Anything unreachable is raised as a task and reported under "Could not measure":
 
 - `gh`
 - `gcloud` and `bq`
@@ -25,5 +25,4 @@ Use this skill when a Sentry alert fires, an editor reports something broken, or
 - `uv` or `python3`
 - the Sentry MCP server
 - the Slack MCP server, for `#hnt-dev-be-alerts`
-
-Anything unreachable is raised as a task and reported under "Could not measure".
+- Zyte API keys, for reproducing an extraction or reading the vendor's stats
