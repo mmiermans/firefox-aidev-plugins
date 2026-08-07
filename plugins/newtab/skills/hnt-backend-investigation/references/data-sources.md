@@ -4,18 +4,14 @@ Reference for the `hnt-backend-investigation` skill.
 
 ## Contents
 
-- The pipeline, and which repo owns each stage
-- Vocabulary: surface, locale, section, assembly, and the id to trace items by
+- The features behind the page, and where to look for one this file does not name
 - Sentry — projects and the traps in reading them
 - Slack — `#hnt-dev-be-alerts`, as alert history and as where updates go
 - Merino — live requests, deployed revision, GCP projects, ranking inputs, the serve-stale cache
-- BigQuery — corpus and crawl state, client telemetry, and the traps in reading them
-- Curated corpus MySQL — access and schema shape
-- The editor plane — admin-api and curated-corpus-api
-- AWS — profiles, the SQS handoff, and what logs give you that Sentry cannot
-- Assembly and cadence — what runs, where, and how often
-- Experiment enrolment
-- Zyte — extraction API and the vendor's own stats
+- **Content recommendations** — the pipeline and repos, vocabulary, BigQuery, corpus MySQL, the
+  editor plane, AWS, assembly cadence, experiment enrolment, Zyte
+- **Picture of the Day** — the daily publish job, and the cache that serves yesterday or nothing
+- **Crossword puzzle of the day** — the vendor mirror, and the two manifests that date it
 - **Access requests** — the one-line ask for each gated source
 
 Write your own queries: this file gives you the shape of the data and the traps, not canned SQL.
@@ -27,57 +23,19 @@ If you are editing this file later: it holds non-derivable access facts and trap
 produce wrong answers. Worked incidents, current issue ids, canned queries, and symptom-to-cause
 lookups belong nowhere in this skill.
 
-## The pipeline
+## The features behind the page
 
-**crawl / discovery → hydration (Zyte) → curated corpus → ML section assembly → SQS →
-corpus-scheduler / section-manager lambda → curated-corpus-api → client-api → Merino → Firefox New
-Tab.** Editors act on the corpus through curation-admin-tools → admin-api → curated-corpus-api.
-Telemetry lands in BigQuery.
-
-`client-api` is the Apollo federated router (`Pocket/pocket-monorepo`, `servers/client-api`) and it
-is easy to miss: it has **no Sentry project of its own in either organisation**, so a failure there
-surfaces as a Merino symptom. Merino also reaches it at the **prod** endpoint unconditionally —
-`CorpusApiGraphConfig.endpoint` returns `CORPUS_API_PROD_ENDPOINT` regardless of Merino's own
-environment, and the dev constant beside it is unused — so stage Merino reads prod corpus data.
-
-| Repo | GitHub | Role |
-|---|---|---|
-| `merino-py` | mozilla-services/merino-py | Serves New Tab recommendations and Firefox Suggest |
-| `content-monorepo` | Pocket/content-monorepo | Curated corpus, recommendations, section manager, the SQS lambdas |
-| `content-ml-services` | mozilla/content-ml-services | Crawl, classification, section assembly (Metaflow, Cloud Functions) |
-| `pocket-monorepo` | Pocket/pocket-monorepo | client-api federated router, shared infrastructure |
-| `curation-admin-tools` | Pocket/curation-admin-tools | Editor-facing web app |
-| `admin-api` | Pocket/admin-api | Federated GraphQL gateway for the admin tools |
-| `bigquery-etl` | mozilla/bigquery-etl | New Tab engagement and Merino export ETL, and the Airflow DAGs behind it |
-| `serverless-image-cache` | Pocket/serverless-image-cache | Thumbor image resize and cache |
-| `firefox` | mozilla-firefox/firefox | Client side of the contract (`browser/extensions/newtab`) |
+New Tab is assembled from features that are served separately and fail separately, so place the
+symptom in one before probing: content recommendations (`curated-recommendations`), Picture of the
+Day (`rss/picture-of-the-day`), the daily crossword (`games/particle`). Those are the ones with
+notes here, not the extent of what the page carries; most of this file is recommendations because
+that feature has by far the most moving parts. For anything else, find its provider under
+`merino/providers/`, its config block in `merino/configs/default.toml`, and read
+`merino/web/api_v1.py` as the index of what Merino serves New Tab.
 
 Locate clones rather than assuming paths:
 `find ~ -maxdepth 3 -type d -name .git -print0 2>/dev/null | xargs -0 -n1 dirname`. For a repo that
 is not cloned, read it through `gh api` or `gh search code`.
-
-## Vocabulary: surface, locale, section, assembly
-
-A **surface** is one locale/market feed of the corpus, written `NEW_TAB_EN_US`. A **section** is a
-topic row inside a surface. **Assembly** is the ML stage that decides which corpus items sit in which
-section for a surface; it runs as Metaflow flows in `content-ml-services` and reaches the corpus
-through SQS, and the stage is called several things across these repos, so pin down which one a claim
-refers to.
-
-Merino's request `locale` is hyphenated (`en-US`) and the surface is **derived** from language plus
-region by `get_recommendation_surface_id` in `merino/curated_recommendations/utils.py`, which also
-branches on experiment enrolment — it is not a reformatting of the locale string. The `SurfaceId` enum
-itself lives in `merino/curated_recommendations/corpus_backends/protocol.py`. Stratifying by locale and
-stratifying by surface are therefore not the same slice, and some surfaces are reachable only through
-enrolment. The cheapest resolution is a live response: it echoes the surface it resolved to.
-
-Merino rewrites item URLs with `utm_source=firefox-newtab-<surface-in-lower-kebab>` (`get_utm_source`
-and `update_url_utm_source` in `curated_recommendations/corpus_backends/utils.py`), so a URL from a
-response generally will not match a stored `url`. Do not reconstruct the parameter yourself: the
-lookup covers only some surfaces, and where it has no entry the URL comes back unmodified. Trace items
-by the stable id instead: the response's `corpusItemId` is the corpus GraphQL item `id`, which lines
-up with `ApprovedItem.externalId` in corpus MySQL and `approved_corpus_item_external_id` in BigQuery.
-Confirm that last hop on the first item you trace rather than assuming it.
 
 ## Sentry
 
@@ -107,8 +65,9 @@ The HNT services are in the **`mozilla`** organisation, prefixed `hnt-`; issue s
 `hnt-prospect-api` · `hnt-prospect-translation-lambda` · `hnt-serverless-image-cache` ·
 `hnt-braze-content-proxy` · `hnt-feature-flags`
 
-Merino is separate: project `merino-py`, also in `mozilla`. Some older projects exist in the `pocket`
-org; prefer the `hnt-` ones for anything current. Enumerate the current projects before relying on
+Merino is separate: project `merino-py`, also in `mozilla`, and it takes every feature Merino serves,
+so `hnt-` marks the corpus and crawl services rather than the whole page. Some older projects exist in
+the `pocket` org; prefer the `hnt-` ones for anything current. Enumerate the current projects before relying on
 this list — a project that does not resolve is a naming change, not evidence of zero errors.
 
 Traps:
@@ -141,7 +100,8 @@ record "nothing similar has fired" on the strength of a source you could not rea
 
 ## Merino
 
-Reproducing the client call is often the fastest confirmation of a client-visible symptom:
+Reproducing the client call is often the fastest confirmation of a client-visible symptom. Each
+feature has its own endpoint, named in its section below; for recommendations it is a POST:
 `POST https://merino.services.mozilla.com/api/v1/curated-recommendations` with a JSON body carrying
 `locale`, `region`, `topics`, `sections`, `feeds` (e.g. `["sections"]`), `enableInterestPicker`, and
 optionally `experimentName` / `experimentBranch` to land on an experiment branch. Send a realistic
@@ -186,7 +146,65 @@ fixed bound while the upstream stays down. A corpus-api or client-api outage the
 as a successful 200 with old content, and only cold pods raise. One live request cannot refute an
 upstream problem, and cannot establish its scope either.
 
-## BigQuery
+## Content recommendations
+
+Everything under this heading is recommendations-only: the crawl, the corpus, the editor plane and
+the BigQuery tables have no counterpart for the other features, which are Merino plus a bucket. There
+are no BigQuery or ETL tables for those, so do not go hunting for them.
+
+### The recommendations pipeline, and which repo owns each stage
+
+**crawl / discovery → hydration (Zyte) → curated corpus → ML section assembly → SQS →
+corpus-scheduler / section-manager lambda → curated-corpus-api → client-api → Merino → Firefox New
+Tab.** Editors act on the corpus through curation-admin-tools → admin-api → curated-corpus-api.
+Telemetry lands in BigQuery.
+
+`client-api` is the Apollo federated router (`Pocket/pocket-monorepo`, `servers/client-api`) and it
+is easy to miss: it has **no Sentry project of its own in either organisation**, so a failure there
+surfaces as a Merino symptom. Merino also reaches it at the **prod** endpoint unconditionally —
+`CorpusApiGraphConfig.endpoint` returns `CORPUS_API_PROD_ENDPOINT` regardless of Merino's own
+environment, and the dev constant beside it is unused — so stage Merino reads prod corpus data.
+
+| Repo | GitHub | Role |
+|---|---|---|
+| `merino-py` | mozilla-services/merino-py | Serves every New Tab feature — recommendations, picture of the day, the crossword — plus Firefox Suggest |
+| `content-monorepo` | Pocket/content-monorepo | Curated corpus, recommendations, section manager, the SQS lambdas |
+| `content-ml-services` | mozilla/content-ml-services | Crawl, classification, section assembly (Metaflow, Cloud Functions) |
+| `pocket-monorepo` | Pocket/pocket-monorepo | client-api federated router, shared infrastructure |
+| `curation-admin-tools` | Pocket/curation-admin-tools | Editor-facing web app |
+| `admin-api` | Pocket/admin-api | Federated GraphQL gateway for the admin tools |
+| `bigquery-etl` | mozilla/bigquery-etl | New Tab engagement and Merino export ETL, and the Airflow DAGs behind it |
+| `serverless-image-cache` | Pocket/serverless-image-cache | Thumbor image resize and cache |
+| `firefox` | mozilla-firefox/firefox | Client side of the contract (`browser/extensions/newtab`) |
+
+Locate clones rather than assuming paths:
+`find ~ -maxdepth 3 -type d -name .git -print0 2>/dev/null | xargs -0 -n1 dirname`. For a repo that
+is not cloned, read it through `gh api` or `gh search code`.
+
+### Vocabulary: surface, locale, section, assembly
+
+A **surface** is one locale/market feed of the corpus, written `NEW_TAB_EN_US`. A **section** is a
+topic row inside a surface. **Assembly** is the ML stage that decides which corpus items sit in which
+section for a surface; it runs as Metaflow flows in `content-ml-services` and reaches the corpus
+through SQS, and the stage is called several things across these repos, so pin down which one a claim
+refers to.
+
+Merino's request `locale` is hyphenated (`en-US`) and the surface is **derived** from language plus
+region by `get_recommendation_surface_id` in `merino/curated_recommendations/utils.py`, which also
+branches on experiment enrolment — it is not a reformatting of the locale string. The `SurfaceId` enum
+itself lives in `merino/curated_recommendations/corpus_backends/protocol.py`. Stratifying by locale and
+stratifying by surface are therefore not the same slice, and some surfaces are reachable only through
+enrolment. The cheapest resolution is a live response: it echoes the surface it resolved to.
+
+Merino rewrites item URLs with `utm_source=firefox-newtab-<surface-in-lower-kebab>` (`get_utm_source`
+and `update_url_utm_source` in `curated_recommendations/corpus_backends/utils.py`), so a URL from a
+response generally will not match a stored `url`. Do not reconstruct the parameter yourself: the
+lookup covers only some surfaces, and where it has no entry the URL comes back unmodified. Trace items
+by the stable id instead: the response's `corpusItemId` is the corpus GraphQL item `id`, which lines
+up with `ApprovedItem.externalId` in corpus MySQL and `approved_corpus_item_external_id` in BigQuery.
+Confirm that last hop on the first item you trace rather than assuming it.
+
+### BigQuery
 
 `bq` ships with the Google Cloud SDK and runs on your `gcloud` credentials, so a missing binary or an
 unauthenticated session is the first thing to rule out, ahead of any dataset permission: `gcloud auth
@@ -200,7 +218,7 @@ Corpus, section and crawl state:
 | Table | What it is for |
 |---|---|
 | `moz-fx-mozsoc-ml-prod.prod_rss_news.rss_feed_items` | Articles discovered by crawl — per-surface, per-source (`PAGE` vs `RSS`) volume over time |
-| `moz-fx-mozsoc-ml-prod.prod_articles.zyte_cache` | One row per hydration attempt, not per article — see the traps below before counting or joining it |
+| `moz-fx-mozsoc-ml-prod.prod_articles.zyte_cache` | Hydrated article metadata — what the pipeline believes an article says. Not unique per url; see the traps below before counting or joining it |
 | `moz-fx-data-shared-prod.snowflake_migration_derived.sections_v1` | Section existence, enable/disable state, and surface, as an event stream |
 | `moz-fx-data-shared-prod.snowflake_migration_derived.section_items_v1` | Which items sit in which section, and when each was last touched — the freshness check for a stalled section |
 | `moz-fx-data-shared-prod.snowflake_migration_derived.corpus_items_current_v1` | One row per corpus item, deduped — but it keeps the latest row even when that row is a removal, so filter status yourself |
@@ -223,11 +241,11 @@ query error.
 
 Traps that will silently give you a wrong answer:
 
-- **`zyte_cache` is not keyed on `canonical_url`.** It holds one row per hydration attempt; a single
-  url can have hundreds. `rss_feed_items` is not unique on `canonical_url` either. So the natural
-  discovered-to-hydrated funnel join fans out several-fold and inflates every count in it. Dedupe
-  **both** sides to one row per url before joining, and note that the event-log warning below is about
-  a different set of tables — it does not make this one safe to count.
+- **`zyte_cache` is not unique on `canonical_url`** — some urls appear many times over — and
+  `rss_feed_items` is not unique on it either. So the natural discovered-to-hydrated funnel join fans
+  out several-fold and inflates every count in it. Dedupe **both** sides to one row per url before
+  joining, and note that the event-log warning below is about a different set of tables — it does not
+  make this one safe to count.
 - **There is no domain column on `rss_feed_items`.** Derive the domain from `canonical_url` (or
   `origin_url` for the page it was found on). A per-domain funnel is a computed grouping, not a
   lookup.
@@ -252,18 +270,12 @@ Traps that will silently give you a wrong answer:
   unknown, never `MANUAL`.
 - **Surface identifiers differ by table.** Crawl data uses `en_US`; section data uses
   `NEW_TAB_EN_US`. Joining or comparing them naively produces empty results that look like an outage.
-- **The crawl surface set, the served surface set, and the set of surfaces ML actually runs for are
-  three different sets**, so a surface missing from one of them is not automatically a bug.
 - **Source mix varies by surface** — some have no RSS-sourced content, some no page-crawled content.
   Judge each surface against its own history.
 - **Volume is strongly day-of-week seasonal.** Compare against a trailing median, never against
   yesterday.
-- Row counts and byte sizes drift; treat any figure here as an order of magnitude and re-measure with
-  `bq show` when the number matters.
-- A zero in the crawl table is ambiguous between "found nothing" and "every request failed"; there is
-  no attempt/error record to disambiguate it.
 
-## Curated corpus MySQL
+### Curated corpus MySQL
 
 Production database behind curated-corpus-api, reached through a preconfigured read-only login path.
 Check what exists with `mysql_config_editor print --all`, and expect to need VPN — a hang rather than
@@ -285,7 +297,7 @@ the surface's own timezone), `RejectedCuratedCorpusItem`, and the `PublisherDoma
 hundreds of thousands — check indexes with `SHOW INDEX` before filtering, since several obvious filter
 columns are unindexed.
 
-## The editor plane
+### The editor plane
 
 When the symptom is editor-facing, reproducing it means an authenticated editor session, which is an
 interactive login and therefore the developer's errand rather than yours. What you can do alone:
@@ -293,7 +305,7 @@ interactive login and therefore the developer's errand rather than yours. What y
 mutation would have touched, and the resolver itself in `Pocket/admin-api` and
 `Pocket/content-monorepo`. That is usually enough to name the mechanism without a session.
 
-## AWS
+### AWS
 
 content-monorepo infrastructure runs in AWS. Discover profiles with
 `grep -E '^\[profile' ~/.aws/config` and confirm one works with `sts get-caller-identity`; match prod
@@ -320,7 +332,7 @@ runs in GCP, not AWS, so its equivalent plane is Cloud Logging or the BigQuery l
 
 SSO sessions expire and the login is interactive, so it has to be the developer: see the table below.
 
-## Assembly and cadence
+### Assembly and cadence
 
 Freshness thresholds are a common thing to want and a common thing to invent. Derive the intended
 cadence from the `@schedule` decorators on the Metaflow flows in `content-ml-services`, and record the
@@ -335,14 +347,14 @@ Which flows exist at all is per-locale, listed in the deployed-locale and deploy
 in the same repo. A surface with no deployed flow is a third possibility alongside a crawl gap and a
 serving gap.
 
-## Experiment enrolment
+### Experiment enrolment
 
 Step 5 makes experiment branch one of the first cuts, and the branch names are not in any of the
 tables above. The Experimenter API lists live and recent experiments without authentication:
 `https://experimenter.services.mozilla.com/api/v6/experiments/`. Use it to get the real slug and branch
 names before slicing telemetry, rather than inventing them or asking.
 
-## Zyte
+### Zyte
 
 Two separate APIs, both **metered — every call costs money**. Save all responses; never bulk-crawl to
 satisfy curiosity. Check for a key with `[ -n "$ZYTE_API_KEY" ] && echo present`. Reference keys by
@@ -366,6 +378,24 @@ HTTP basic username with an empty password, so the extraction key will be reject
 `response_codes` is a *filter*, not a grouping, and `include_domain_health=true` is rejected without
 `groupby_domain=true`. This is the right source for "did this domain start failing, and when" — your
 own logs will not show it if the pipeline discards non-allowlisted status codes.
+
+## Picture of the Day
+
+`GET /api/v1/rss/picture-of-the-day` serves only what the daily `wikimedia_potd_updater` job put at
+`wikimedia_potd/<YYYY-MM-DD>/potd.json` in the images bucket, so today's object existing separates a
+producer problem from a serving one; a failed run is one `merino-py` Sentry event, exit code 0. The
+manifest is cached per pod against today's UTC date and a failed refresh keeps the old entry: pods
+that cached yesterday serve yesterday's picture while pods started since return `null` — both HTTP
+200, logged at info, raised nowhere, and counted only by `potd.provider.cached.none`.
+
+## Crossword puzzle of the day — the `particle` provider
+
+`GET /api/v1/games/particle` only echoes a configured URL to a static site in a bucket, so a healthy
+endpoint says nothing about today's puzzle. A cron (`games_tasks update-particle`) diffs the vendor's
+`runtime-manifest.v1.json` against the bucket's copy by version, per channel — `daily` is the puzzle,
+`runtime` the engine — never by date; both manifests are public, so fetch each to see which side is
+behind. A run logs `Files updated? False` whether it was idle or failed and emits no metrics, so
+Sentry is the rest of the plane; `docs/providers/games/particle.md` has the detail.
 
 ## Access requests
 
