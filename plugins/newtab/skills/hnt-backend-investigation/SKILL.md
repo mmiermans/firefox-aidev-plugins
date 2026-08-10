@@ -217,10 +217,15 @@ first answer looked clear, because that is where a wrong inference survives. Sto
 would only re-read the same plane, and record in FINDINGS.md which sources each claim rests on, so one
 standing on a single source is visible as such.
 
-Re-read the prior. If your conclusion implies that something the prior says is working is broken,
-re-check your own measurement first; a stratum mismatch or a wrong surface identifier is the likelier
-explanation. If the measurement survives that, the measurement wins: state the contradiction in
-FINDINGS.md, note it to the developer in one line, and keep going.
+**Contradictory results are the most valuable thing you can find, so do not smooth them away.** Weigh a
+result the same whether or not it helps the hypothesis you favour: one that cuts against a hypothesis
+already carrying evidence matters more, not less. Record it, say plainly what contradicts what, and make
+the conflict the next question rather than something to be explained past.
+
+The same holds when a measurement disagrees with the prior, or with what the developer told you is
+working. Re-check the measurement first, since a stratum mismatch or a wrong surface identifier is
+likelier than the system having changed under you. If it survives that, keep both on the record: say
+which one you trust and why, tell the developer in one line, and carry on.
 
 Mark every claim **verified**, **inferred**, or **refuted**. Keep the refuted ones in the document;
 they stop the next person re-running them.
