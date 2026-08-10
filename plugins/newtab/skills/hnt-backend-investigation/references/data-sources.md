@@ -165,6 +165,7 @@ environment, and the dev constant beside it is unused — so stage Merino reads 
 | `merino-py` | mozilla-services/merino-py | Serves every New Tab feature — recommendations, picture of the day, the crossword — plus Firefox Suggest |
 | `content-monorepo` | Pocket/content-monorepo | Curated corpus, recommendations, section manager, the SQS lambdas |
 | `content-ml-services` | mozilla/content-ml-services | Crawl, classification, section assembly (Metaflow, Cloud Functions) |
+| `hnt-content` | mozilla/hnt-content | A rewrite of crawl and extraction. **In development, not serving production as of Aug 2026** — the crawl that runs is the one in `content-ml-services`, so a mechanism read out of this repo describes nothing that is live |
 | `pocket-monorepo` | Pocket/pocket-monorepo | client-api federated router, shared infrastructure |
 | `curation-admin-tools` | Pocket/curation-admin-tools | Editor-facing web app |
 | `admin-api` | Pocket/admin-api | Federated GraphQL gateway for the admin tools |
