@@ -85,6 +85,8 @@ FINDINGS.md is about the same symptom.
   directory exists and in any case before you write a conclusion down; the steps that follow write into
   it as they go, so the write-up step is a final pass over a document that already exists. Rewrite it in
   place, not as `FINDINGS-v2.md`.
+- `HYPOTHESES.md` — the working list, live and dead, each with what would kill it. Hypotheses go here
+  rather than in FINDINGS.md, which carries the conclusion they led to.
 - Add subdirectories only when you have something to put in them, not up front: `queries/` and
   `results/` for each query and its output under a matching basename, `api_responses/` for raw JSON
   from live calls. Save responses even when they look boring; the same request may not return the same
@@ -177,13 +179,23 @@ Start where pinning down the report left you: the stage whose output is wrong, t
 the moment it changed. Ask what could produce exactly that, follow the data one hop upstream, and let
 each result raise the next question.
 
-Work the live hypotheses in parallel. Write beside each hypothesis the result that would kill it, then
-issue them as parallel calls in a single batch, handing any line that needs several dependent steps to
-a subagent. Keep the first wave small and quick, and hold anything slow or wide for the second. Name
-each query file after its hypothesis so a result cannot be attributed to the wrong line.
+Keep them in `HYPOTHESES.md`, a row each, and write the result that would kill one before you go
+looking:
 
-Then look at what came back and do it again. Being down to one surviving hypothesis is a prompt, not an
-answer: ask what else could produce what you measured before committing to it. And when a source stops
+```markdown
+| # | Hypothesis | What would kill it | Probe | Result | Status |
+```
+
+Status is live, killed, parked, or confirmed. Killed rows stay; they are what stops the next person
+re-running them.
+
+Work the live ones in parallel: issue the probes as parallel calls in a single batch, handing any line
+that needs several dependent steps to a subagent. Keep the first wave small and quick, and hold
+anything slow or wide for the second. Name each query file after its hypothesis so a result cannot be
+attributed to the wrong line.
+
+Then look at what came back, update the rows, and do it again. Being down to one surviving hypothesis
+is a prompt, not an answer: ask what else could produce what you measured before committing to it. And when a source stops
 yielding, measure the same thing in another plane — the failure is often invisible in the one you
 started in.
 
@@ -258,8 +270,9 @@ directory.
 ## Root cause
 The mechanism, with the code path or config that produces it. "Not established" when it is not.
 
-## Hypotheses considered and dropped
-What you ruled out, and what ruled it out.
+## Hypotheses
+The surviving explanation, and the lines worth knowing were ruled out. `HYPOTHESES.md` alongside
+has the full list with its kill conditions.
 
 ## Impact quantified
 Rows, requests, users, hours, locales. A number, or an explicit "unquantified because X".
