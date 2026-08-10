@@ -281,6 +281,12 @@ Production database behind curated-corpus-api, reached through a preconfigured r
 Check what exists with `mysql_config_editor print --all`, and expect to need VPN — a hang rather than
 an auth error is the usual symptom of being off it.
 
+**Connect as a read-only user or not at all.** `pkt_curation_corpus` is the application's own account on
+the prod cluster and carries full write and schema privileges; decline it even for a `SELECT`, and
+decline it if it is the only credential on offer. Where no read-only login path exists, that is a
+blocked source: raise the request below and carry on with BigQuery, which answers most corpus questions
+anyway.
+
 Useful invocation guards: `--safe-updates` (caps returned rows at 1000 and aborts queries estimated
 to examine over a million) and `SET SESSION max_execution_time=10000` (10s server-side cap). The
 1000-row cap **truncates silently**, so add an explicit `LIMIT` or raise the cap when you need a
@@ -438,7 +444,8 @@ Roughly ordered by how often an investigation needs them, cheapest first.
 | AWS SSO session expired | `aws --profile <profile> sso login` |
 | The answer is in a dashboard you cannot reach | Open it, apply the specific filter you name, and read back the one number or shape you asked for. Asking for *access* to a dashboard is usually the slower path; asking a precise question about what it shows is faster for both of you |
 | No AWS profile at all | `aws configure sso` for a read-only role, or have them name a profile already in their `~/.aws/config` |
-| No read-only MySQL login path configured | Create one: `mysql_config_editor set --login-path=prod-curated-corpus-api-readonly --host=<host> --user=<user> --password`, and tell you the path name |
+| No read-only MySQL user exists | Create one against the prod cluster with an admin credential: `CREATE USER '<name>'@'%' IDENTIFIED BY '<password>';` then `GRANT SELECT ON curation_corpus.* TO '<name>'@'%';` — `SELECT` on that one schema and nothing else |
+| No read-only MySQL login path configured | Store the read-only user as a login path: `mysql_config_editor set --login-path=prod-curated-corpus-api-readonly --host=<host> --user=<name> --password`, and tell you the path name. Do not paste the password to you |
 | Permission denied on a dataset or a Merino project | Request read access, or viewer on the project; say meanwhile whether the question is about payload shape, which stage can answer |
 | No `mcp__slack__` tools | `/plugin install slack@claude-plugins-official` typed into Claude Code, then `/mcp` to authenticate. The server needs a fixed OAuth callback port, so it can clash with another session authenticating at the same moment. Or have them post the drafted message to `#hnt-dev-be-alerts` themselves |
 | Zyte extraction key missing | Create one at https://app.zyte.com/o/612928/zyte-api/api-access, then add it to the `env` block of `~/.claude/settings.json`: `"env": { "ZYTE_API_KEY": "<key>" }`. That reaches every session and the commands it spawns, and it is the user-scope file rather than anything checked in. A shell `export` will not reach this session, which did not inherit it |
