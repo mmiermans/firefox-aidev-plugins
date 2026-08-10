@@ -1,6 +1,6 @@
 ---
 name: hnt-backend-investigation
-description: Investigates Home New Tab backend errors, outages, and data-quality problems in whichever New Tab feature the symptom lands in: content recommendations (Merino, the curated corpus, admin-api, the article crawler, the ML section pipeline, the New Tab data pipelines), Picture of the Day, the daily crossword, or a feature not named here. Confirms the symptom independently, probes competing hypotheses in parallel, stratifies metrics, tries to break its own conclusion, then writes an evidence-backed FINDINGS doc with a root cause and quantified impact. Use when a Sentry alert fires, an editor reports something broken, or a New Tab feature looks empty, wrong, or stale — recommendations, the picture of the day, the puzzle. For backend investigation, not in-tree browser/extensions/newtab frontend work.
+description: Investigates Home New Tab backend errors, outages, and data-quality problems in whichever New Tab feature the symptom lands in, whether content recommendations (Merino, the curated corpus, admin-api, the article crawler, the ML section pipeline, the New Tab data pipelines), Picture of the Day, the daily crossword, or a feature not named here. Confirms the symptom independently, probes competing hypotheses in parallel, stratifies metrics, tries to break its own conclusion, then writes an evidence-backed FINDINGS doc with a root cause and quantified impact. Use when a Sentry alert fires, an editor reports something broken, or a New Tab feature looks empty, wrong, or stale — recommendations, the picture of the day, the puzzle. For backend investigation, not in-tree browser/extensions/newtab frontend work.
 ---
 
 # New Tab (HNT) Backend Investigation
@@ -19,7 +19,6 @@ populations can be affected, and every finding should say which: **Firefox New T
 working through curation-admin-tools and admin-api.
 
 Access and traps, per system: [references/data-sources.md](references/data-sources.md)
-Failure mechanisms, invariants, falsification moves: [references/failure-modes.md](references/failure-modes.md)
 
 ## How to think about this
 
@@ -138,8 +137,9 @@ dated prefix for a publish job, a live Merino request for anything client-facing
 whether Firefox clients are affected at all. An
 error floor that never reaches the output is a not-incident; errors flat with output at zero is
 worse than the alert says. When the report is a Sentry alert, resolve it to a concrete error and a
-volume, and decompose the issue by error message before trusting its title or its trend — the
-alert-quality checks are in `references/failure-modes.md`.
+volume, and decompose the issue by error message before trusting its title or its trend. An alert
+can be mis-centred, watching the wrong layer, or counting per open period rather than per day, so
+confirm the signal itself before chasing the system behind it.
 
 Sentry is the plane most of this reads from, so if the `mcp__sentry__` tools are absent, say so and
 raise it like any other blocked source, then carry on with the planes you do have.
@@ -200,14 +200,13 @@ after its hypothesis, so a result cannot be attributed to the wrong line.
 
 Then look at what came back and do it again. Each round should either kill a line or sharpen the next
 question; when a round kills everything, the data has moved you upstream rather than left you stuck.
-If you are down to a single surviving hypothesis, that is the moment to check the failure classes and
-silent-failure mechanisms in `references/failure-modes.md` against what you have measured, as a guard
-against having narrowed too early.
+Being down to a single surviving hypothesis is a prompt, not an answer: ask what else could produce
+exactly what you measured before you commit to it.
 
 Two moves consistently break cases open: **leave the tool you started in** — when a source stops
 yielding, measure the same thing somewhere else, since the failure is often invisible in the plane
 you began with — and **compare against sibling strata**, which localises a fault faster than reading
-code. Both are expanded in `references/failure-modes.md`.
+code.
 
 ## Step 4 — build the timeline
 
@@ -257,9 +256,11 @@ Before writing anything down as fact, attack it:
 - Check the boring explanations first: timezone; a filter in your own query; a `LIMIT` silently
   truncating; an unrepresentative code path; sampling; a column that does not mean what its name
   says; a partially-launched feature.
-- Then reach for the falsification moves in `references/failure-modes.md` — the code path, exact
-  enumeration, repetition, the real limit, the config's history — picking the ones that would break
-  your specific mechanism.
+- Then attack the mechanism itself, with whichever of these would break yours: read the code path
+  rather than assuming it; enumerate exactly instead of sampling, since "0 of N" is a different claim
+  from "none in my sample"; repeat a suspicious observation before calling anything
+  non-deterministic; read the real limit rather than guessing which one binds; and check the history
+  of the constant or config you are relying on.
 - **Measure the effect, not just the mechanism.** A guard that provably runs is not evidence that
   the outcome is correct; verify the outcome separately.
 - Cross-check against a second, independent source. One source is a hypothesis.
