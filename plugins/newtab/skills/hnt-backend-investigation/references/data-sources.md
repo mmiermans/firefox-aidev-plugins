@@ -348,16 +348,12 @@ SSO sessions expire and the login is interactive, so it has to be the developer:
 ### Assembly and cadence
 
 Freshness thresholds are a common thing to want and a common thing to invent. Derive the intended
-cadence from the `@schedule` decorators on the Metaflow flows in `content-ml-services`, and record the
-interval you used in FINDINGS.md. Two traps sit in that derivation:
+cadence from the `@schedule` decorators on the Metaflow flows in `content-ml-services/jobs/metaflow/`,
+and record the interval you used in FINDINGS.md. Some decorators also pass a per-surface timezone, so
+that schedule is surface-local rather than UTC.
 
-- The cron is wrapped so that it **only takes effect when a deploy-time environment variable is set**;
-  otherwise the decorator receives a deliberately impossible date that never fires. Reading the literal
-  cron out of the source and reporting "runs daily at 11:00" can be wrong twice over.
-- The decorator also passes a per-surface timezone, so the schedule is surface-local, not UTC.
-
-Which flows exist at all is per-locale, listed in the deployed-locale and deployed-flow JSON manifests
-in the same repo. A surface with no deployed flow is a third possibility alongside a crawl gap and a
+Which flows are deployed is per-locale, listed in `jobs/metaflow/deployed_flows_<locale>.json` in the
+same repo. A surface whose flow is not deployed is a third possibility alongside a crawl gap and a
 serving gap.
 
 ### Experiment enrolment
