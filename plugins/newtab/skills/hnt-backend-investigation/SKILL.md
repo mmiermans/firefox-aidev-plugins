@@ -64,7 +64,7 @@ name the view, the filter, and the single number or shape you need, and ask them
 
 Restate it exactly once more — whichever comes first: the unblocked lines run out, or you are three
 probes into a line you had already judged weaker than the blocked one. That is the second and last
-ask, and it does not apply if they have already answered. If there is still no response, finish steps 7 and 8 with `Status: blocked`,
+ask, and it does not apply if they have already answered. If there is still no response, write up and close out with `Status: blocked`,
 name the one unblock under "Could not measure", and leave the access task pending.
 
 Stopping outright is a last resort: only when the blocked source is the only thing that can settle
@@ -82,7 +82,7 @@ investigations in. Do not assume where that root is. Establish it in this order:
    root, use it and do not ask.
 2. **Otherwise ask, once, before your first write.** Where the developer keeps investigations cannot
    be derived, and guessing puts files somewhere they did not choose. Ask it as a single question at
-   the start, and run the step-1 probes while you wait rather than idling.
+   the start, and start pinning down the report while you wait rather than idling.
 3. **Then record it.** Append one line to `~/.claude/CLAUDE.md`, creating that file if it does not
    exist: `Investigations live in <path> (one subdirectory per investigation).` Tell the developer
    you saved it, so they know they will not be asked again. Auto memory is the wrong home for this:
@@ -94,10 +94,10 @@ investigations, follow the naming they use; otherwise `<mon><DD>-<slug>`, e.g.
 `jul29-empty-de-sections`. Say which directory you created. Reuse an existing one only when its
 FINDINGS.md is about the same symptom.
 
-- `FINDINGS.md` — one living document. Create it from the step-7 skeleton the moment the directory
-  exists, and in any case before you write a conclusion down; steps 2 through 6 write into it as they
-  go, so step 7 is a final pass over a document that already exists. If you are still waiting on the
-  root, run the step-1 probes anyway and hold their output until you have somewhere to put it. Rewrite
+- `FINDINGS.md` — one living document. Create it from the skeleton in the write-up step the moment the directory
+  exists, and in any case before you write a conclusion down; every step that follows writes into it as
+  it goes, so the write-up step is a final pass over a document that already exists. If you are still waiting on the
+  root, run the first probes anyway and hold their output until you have somewhere to put it. Rewrite
   it in place, not as `FINDINGS-v2.md`.
 - `queries/` and `results/` — every query as a file, its output alongside under the same basename.
 - `api_responses/` — raw JSON from live calls. Save them even when they look boring; metered APIs
@@ -129,7 +129,7 @@ happening.
 
 **If it is still happening, capture the perishable evidence first** — a live request for the feature,
 current logs, and whatever counts or artifact it publishes — and save the raw responses under
-`api_responses/`. Build the step-2 prior while those probes are in flight; history
+`api_responses/`. Establish what normal is while those probes are in flight; history
 keeps, live signal does not.
 
 **An error-rate signal is not yet a symptom.** Measure the erroring stage's *output* to fix the
@@ -155,7 +155,7 @@ what clients see on the surface. Probe both in parallel and state which populati
 
 The moment you confirm client-visible impact that is still happening, state it in one line — what,
 how big, since when — and keep investigating. If that deserves a heads-up in `#hnt-dev-be-alerts`,
-follow the posting rule at the end of step 8.
+follow the posting rule under "Posting to `#hnt-dev-be-alerts`".
 
 ## Step 2 — establish what "normal" is
 
@@ -185,8 +185,8 @@ query contradicts the prior, treat your own inference as the suspect first, and 
 
 ## Step 3 — form hypotheses from the data, then probe them in parallel
 
-Hypotheses come from what you have already measured, not from a catalogue. Start where step 1 put
-you: the stage whose output is wrong, the stratum that is affected, the moment it changed. Ask what
+Hypotheses come from what you have already measured, not from a catalogue. Start where pinning down
+the report put you: the stage whose output is wrong, the stratum that is affected, the moment it changed. Ask what
 could produce exactly that, follow the data one hop upstream, and let each result generate the next
 question. A hypothesis you cannot tie to something you have observed is a guess competing for the
 same probe budget as one you can.
@@ -219,7 +219,7 @@ An explicit `timestamp (UTC) | observation | source` table.
   Widen freely on the cheap planes; on a billed plane, widen only after a narrow window has shown
   you something.
 - Distinguish *first occurrence* from *first noticed*, and state both.
-- Line the window up against the deploys and config changes from step 2.
+- Line the window up against the deploys and config changes the prior turned up.
 - Treat retention limits as limits: a "first seen" date can be the edge of a retention window rather
   than onset. See `references/data-sources.md`.
 - **The scheduling layer is not in UTC.** Scheduled dates and the assembly crons run in each surface's
@@ -263,7 +263,7 @@ Before writing anything down as fact, attack it:
 - **Measure the effect, not just the mechanism.** A guard that provably runs is not evidence that
   the outcome is correct; verify the outcome separately.
 - Cross-check against a second, independent source. One source is a hypothesis.
-- Re-read the step-2 prior. If your conclusion implies that something the prior says is working is
+- Re-read the prior you established. If your conclusion implies that something it says is working is
   broken, re-check your own measurement first — a filter in your query, a stratum mismatch, or a
   wrong surface identifier is the likelier explanation. If the measurement survives that re-check,
   the measurement wins: state the contradiction explicitly in FINDINGS.md, note it to the developer

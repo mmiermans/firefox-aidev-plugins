@@ -358,7 +358,7 @@ serving gap.
 
 ### Experiment enrolment
 
-Step 5 makes experiment branch one of the first cuts, and the branch names are not in any of the
+Stratifying makes experiment branch one of the first cuts, and the branch names are not in any of the
 tables above. The Experimenter API lists live and recent experiments without authentication:
 `https://experimenter.services.mozilla.com/api/v6/experiments/`. Use it to get the real slug and branch
 names before slicing telemetry, rather than inventing them or asking. It returns every experiment, so
@@ -385,10 +385,17 @@ unapproved domains into the corpus.
 per-domain response-code distribution over time. It takes a **different credential** — the Zyte
 dashboard API key from the organisation's settings page, explicitly not the Zyte API key above — as the
 HTTP basic username with an empty password, so the extraction key will be rejected here.
-`organization_id` is **required** and is `612928`. Only `groupby_time` and `groupby_domain` group;
-`response_codes` is a *filter*, not a grouping, and `include_domain_health=true` is rejected without
-`groupby_domain=true`. This is the right source for "did this domain start failing, and when" — your
-own logs will not show it if the pipeline discards non-allowlisted status codes.
+`organization_id` is **required** and is `612928`. Only `groupby_time` (`hour|day|month|year`) and
+`groupby_domain` group; `response_codes`, `domains`, `extraction_type` and `extraction_from` are
+*filters*, not groupings, and `include_domain_health=true` is rejected without `groupby_domain=true`.
+
+Two defaults will quietly narrow an answer. **`start_time` defaults to seven days ago**, so a question
+about when something began returns only the last week unless you pass an explicit window with
+`end_time`. And results are **paginated, `page_size` maxing out at 500**, so a per-domain breakdown over
+any real window is truncated unless you walk `page`. Both look like a complete answer.
+
+This is the right source for "did this domain start failing, and when" — your own logs will not show it
+if the pipeline discards non-allowlisted status codes.
 
 ## Picture of the Day
 
@@ -412,8 +419,8 @@ Sentry is the rest of the plane; `docs/providers/games/particle.md` has the deta
 
 `#hnt-dev-be-alerts` is where investigation updates go. Posting needs the developer's approval for
 **each** message and prefers a reply in the thread of the alert that started this, so locating that
-one message is what the `mcp__slack__` tools are for here; the rule is at the end of step 8 in
-SKILL.md. See Access requests if the tools are absent.
+one message is what the `mcp__slack__` tools are for here; the rule is under "Posting to
+`#hnt-dev-be-alerts`" in SKILL.md. See Access requests if the tools are absent.
 
 ## Access requests
 
@@ -442,7 +449,7 @@ Roughly ordered by how often an investigation needs them, cheapest first.
 | `gcloud` or `bq` not installed | Install the Google Cloud SDK, which provides both |
 | No billing project configured | Confirm you can bill `mozdata-nonprod`, or name their personal sandbox, usually `moz-fx-dev-<ldap>-sandbox`; either can be set with `gcloud config set project <id>` |
 | No `mcp__sentry__` tools at all | `claude mcp add --scope user --transport http sentry https://mcp.sentry.dev/mcp`, then `/mcp` in the restarted session to authenticate |
-| Sentry connected but unauthenticated or scoped too narrowly | `/mcp`, and authenticate for the `mozilla` org. Or read back the issue's event counts broken down by error message |
+| Sentry connected but unauthenticated or scoped too narrowly | `/mcp`, and authenticate for the `mozilla` org |
 | Corpus MySQL hangs rather than erroring | Connect to Mozilla VPN, then say so; if it still hangs the login path itself is stale |
 | AWS SSO session expired | `aws --profile <profile> sso login` |
 | The answer is in a dashboard you cannot reach | Open it, apply the specific filter you name, and read back the one number or shape you asked for. Asking for *access* to a dashboard is usually the slower path; asking a precise question about what it shows is faster for both of you |
