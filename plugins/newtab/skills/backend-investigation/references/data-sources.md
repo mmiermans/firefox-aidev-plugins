@@ -112,11 +112,15 @@ Nothing requires curl. Pick whatever suits the moment, and reach for a short scr
 vary a field across several requests or parse what comes back; either way send the body to a file.
 
 `CuratedRecommendationsRequest` in `merino/curated_recommendations/protocol.py` is the authority on
-that body, and two fields catch people out. `count` defaults to 100 when omitted, so response size is
-governed by a field you may not have set. The UTC offset is accepted as either `utcOffset` or
-`utc_offset`, must be 0 to 23, and anything else is quietly coerced to null rather than rejected. Set
-`experimentName` and `experimentBranch` to land on a branch. First things to check on the response:
-section count, items per section, presence of `followable` / `allowAds`, and the age of the newest
+that body. An out-of-range UTC offset is quietly coerced to null rather than rejected, so a malformed
+one does not announce itself; the field is taken as either `utcOffset` or `utc_offset` and must be 0 to
+23. `count` governs the flat list only and defaults to 100; it does nothing to the sections feed. Set
+`experimentName` and `experimentBranch` to land on a branch.
+
+Where the recommendations sit depends on what you asked for. With `feeds:["sections"]` the flat `data`
+array comes back empty and the sections arrive under `feeds`, keyed by section id, each carrying its own
+`recommendations`. Omit `feeds` and you get `data` instead. Worth checking either way: how many sections
+came back, how many items each carries, presence of `followable` / `allowAds`, and the age of the newest
 item.
 
 `GET /__version__` returns the running commit and build URL. Use it before trusting a repo log:
