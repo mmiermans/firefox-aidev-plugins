@@ -397,23 +397,22 @@ session back up where it left off
 Then carry on. The items stay pending and visible while you work; close them when they land, and delete
 any whose line stopped mattering.
 
+Roughly ordered by how often an investigation needs them, cheapest first.
+
 | Blocked source | Ask them to |
 |---|---|
-| Corpus MySQL hangs rather than erroring | Connect to Mozilla VPN, then say so; if it still hangs the login path itself is stale |
-| No read-only MySQL login path configured | Create one: `mysql_config_editor set --login-path=prod-curated-corpus-api-readonly --host=<host> --user=<user> --password`, and tell you the path name |
-| AWS SSO session expired | `aws --profile <profile> sso login` |
-| No AWS profile at all | `aws configure sso` for a read-only role, or have them name a profile already in their `~/.aws/config` |
-| `gcloud` or `bq` not installed | Install the Google Cloud SDK, which provides both |
 | `gcloud` installed but not authenticated | `gcloud auth login`, plus `gcloud auth application-default login` if you need the Python client libraries |
+| `gcloud` or `bq` not installed | Install the Google Cloud SDK, which provides both |
 | No billing project configured | Name one they can bill, usually `moz-fx-dev-<ldap>-sandbox`, or set it with `gcloud config set project <id>` |
-| Permission denied on a dataset or a Merino project | Request read access, or viewer on the project; say meanwhile whether the question is about payload shape, which stage can answer |
-| Zyte extraction key missing | Create one at https://app.zyte.com/o/612928/zyte-api/api-access, then `export ZYTE_API_KEY=<key>`. Or have them run the single extraction and paste back the JSON, not the key |
-| Zyte Stats key missing | Issue a **dashboard** API key from the Zyte organisation settings page and export it; the extraction key will not authenticate against the Stats API |
 | No `mcp__sentry__` tools at all | `claude mcp add --scope user --transport http sentry https://mcp.sentry.dev/mcp`, then `/mcp` in the restarted session to authenticate |
-| Sentry connected but unauthenticated or scoped too narrowly | Run `/mcp` and authenticate for the `mozilla` org, or read back the issue's event counts broken down by error message |
+| Sentry connected but unauthenticated or scoped too narrowly | `/mcp`, and authenticate for the `mozilla` org. Or read back the issue's event counts broken down by error message |
+| Corpus MySQL hangs rather than erroring | Connect to Mozilla VPN, then say so; if it still hangs the login path itself is stale |
+| AWS SSO session expired | `aws --profile <profile> sso login` |
+| The answer is in a dashboard you cannot reach | Open it, apply the specific filter you name, and read back the one number or shape you asked for. Asking for *access* to a dashboard is usually the slower path; asking a precise question about what it shows is faster for both of you |
+| No AWS profile at all | `aws configure sso` for a read-only role, or have them name a profile already in their `~/.aws/config` |
+| No read-only MySQL login path configured | Create one: `mysql_config_editor set --login-path=prod-curated-corpus-api-readonly --host=<host> --user=<user> --password`, and tell you the path name |
+| Permission denied on a dataset or a Merino project | Request read access, or viewer on the project; say meanwhile whether the question is about payload shape, which stage can answer |
 | No `mcp__slack__` tools | `/plugin install slack@claude-plugins-official` typed into Claude Code, then `/mcp` to authenticate. The server needs a fixed OAuth callback port, so it can clash with another session authenticating at the same moment. Or have them post the drafted message to `#hnt-dev-be-alerts` themselves |
+| Zyte extraction key missing | Create one at https://app.zyte.com/o/612928/zyte-api/api-access, then add it to the `env` block of `~/.claude/settings.json`: `"env": { "ZYTE_API_KEY": "<key>" }`. That reaches every session and the commands it spawns, and it is the user-scope file rather than anything checked in. A shell `export` will not reach this session, which did not inherit it |
+| Zyte Stats key missing | Issue a **dashboard** API key from the Zyte organisation settings page — the extraction key will not authenticate against the Stats API — and add it to the same `env` block as `ZYTE_SECRET_KEY` |
 | Editor-facing symptom needs an authenticated session | Reproduce the click themselves and report the exact error text and time |
-| The answer is in a dashboard you cannot reach | Open it, apply the specific filter you name, and read back the one number or shape you asked for |
-
-Notice the last row: when a dashboard, explore, or console holds the answer, asking for *access* is
-usually the slower path. Asking a precise question about what it shows is faster for both of you.
