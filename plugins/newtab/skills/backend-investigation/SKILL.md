@@ -1,6 +1,6 @@
 ---
-name: hnt-backend-investigation
-description: Diagnoses backend problems behind Firefox Home New Tab, across Merino, the curated corpus, admin-api, the article crawler, Picture of the Day and the daily crossword. Use when a Sentry alert fires on one of those services, an editor reports something broken, or a New Tab feature looks empty, wrong, or stale. Backend only, not in-tree browser/extensions/newtab frontend work.
+name: backend-investigation
+description: Diagnoses backend problems behind Firefox Home New Tab (HNT), across Merino, the curated corpus, admin-api, the article crawler, Picture of the Day and the daily crossword. Use when a Sentry alert fires on one of those services, an editor reports something broken, or a New Tab feature looks empty, wrong, or stale. Backend only, not in-tree browser/extensions/newtab frontend work.
 ---
 
 # New Tab (HNT) Backend Investigation

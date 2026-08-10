@@ -1,6 +1,6 @@
 # New Tab (HNT) backend — where to look
 
-Reference for the `hnt-backend-investigation` skill.
+Reference for the `backend-investigation` skill.
 
 Write your own queries: this file gives you the shape of the data and the traps, not canned SQL.
 Access varies by developer. Verify a source is reachable before building a plan around it, and if it
