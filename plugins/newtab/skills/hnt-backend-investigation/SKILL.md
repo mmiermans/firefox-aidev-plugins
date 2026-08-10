@@ -27,13 +27,11 @@ Access and traps, per system: [references/data-sources.md](references/data-sourc
 
 You know how to investigate. These are the preferences that make an investigation here land well:
 
-- **Confirm the symptom yourself before explaining it**, whatever the source. An alert can be
-  mis-centred or watching the wrong layer, and a description passed through two people drifts.
+- **Confirm the symptom yourself before explaining it**, whatever the source reported.
 - **Let the data generate the hypotheses**, one round at a time, rather than enumerating everything up
   front. Where several are live at once, probe them in parallel instead of serially.
 - **Measure rather than reason.** Reproduce the request, count the rows, read the code path. The
   characteristic failure here is a correct query paired with a wrong inference, stated confidently.
-- **Keep going while you wait.** Blocked access and unanswered questions are not stopping points.
 
 ## Don't stall on the developer
 
@@ -105,10 +103,7 @@ Where it is not, leave it open and say so. An assumed onset is worse than an unk
 everything downstream quietly inherits it.
 
 Normalise and label every timestamp, since a subtraction error can manufacture an outage that never
-happened. Extend the window to weeks rather than hours; these failures are frequently older than the
-report. Distinguish first occurrence from first noticed, line the window up against the deploys and
-config changes you turned up, and remember that a source with a retention window cannot establish
-onset — its earliest record may simply be its oldest.
+happened, and line the window up against the deploys and config changes you turned up.
 
 **The scheduling layer is not in UTC.** Scheduled dates and the assembly crons run in each surface's
 own timezone, so a UTC comparison invents a one-day gap for part of every day on any surface offset
@@ -204,7 +199,7 @@ started in.
 An aggregate that looks fine is the normal way these problems hide. Slice by the dimensions the feature
 actually has — for recommendations **domain, locale, region, surface, section, experiment branch, and
 client/addon version**, for a once-a-day global artifact barely more than the date — and look for a
-single stratum at zero or down sharply against its own trailing median rather than against yesterday.
+single stratum at zero or down sharply against its own trailing median.
 When the report says "some users" with no stratum attached, try experiment branch, region and rollout
 state first: some surfaces are reachable only through enrolment, which a locale slice cannot see.
 
@@ -239,8 +234,7 @@ working. Re-check the measurement first, since a stratum mismatch or a wrong sur
 likelier than the system having changed under you. If it survives that, keep both on the record: say
 which one you trust and why, tell the developer in one line, and carry on.
 
-Mark every claim **verified**, **inferred**, or **refuted**. Keep the refuted ones in the document;
-they stop the next person re-running them.
+Mark every claim **verified**, **inferred**, or **refuted**, and keep the refuted ones.
 
 ## Step 6 — write FINDINGS.md
 
@@ -286,9 +280,8 @@ Any telemetry plane you could not reach, and the access that would unblock it.
 
 ## Step 7 — close the loop
 
-- **Report what you could not reach.** Missing dashboard, IAM, token, or VPN access is a finding, not
-  an inconvenience to route around. Leave any unresolved access task on the list rather than clearing
-  it.
+- **Leave unresolved access tasks on the list** rather than clearing them, and report what you could
+  not reach as a finding rather than an inconvenience you routed around.
 - **Link prior art** — older investigation, ticket, postmortem, or a related error already known.
 - **Leave the follow-up as a task**, owned by whoever will act: confirm the fix shipped and the metric
   actually recovered. State that you have done so rather than asking whether to.
