@@ -240,6 +240,14 @@ from an empty result, and use `bq ls <dataset>` to settle whether something is a
 whether it is partitioned — a view has no partition column, so ordering a partition filter on one is a
 query error.
 
+These are the tables that come up most, not everything that is modelled. When they cannot answer the
+question, `bigquery-etl` is the index of what else exists: each derived table has a directory at
+`sql/<project>/<dataset>/<table>/` holding its `query.sql`, `schema.yaml` and `metadata.yaml`, so
+grepping a table or column name there finds both what produces it and what sits beside it. If that repo
+is cloned locally, hand the search to a subagent on the fastest model you have — it is a grep-and-read
+job whose answer is a table name and a few columns, and delegating keeps a wide search out of your
+context.
+
 Traps that will silently give you a wrong answer:
 
 - **`zyte_cache` is not unique on `canonical_url`** — some urls appear many times over — and
