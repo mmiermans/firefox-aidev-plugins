@@ -36,10 +36,9 @@ to discriminate look similar and are not. The characteristic failure in this dom
 query paired with a wrong inference, stated confidently.
 
 **Work several lines at once.** When more than one explanation is plausible, probe them in parallel
-rather than following the most attractive one to its end. Breadth is cheap in the unmetered planes —
-Sentry, repo reads, CloudWatch alarm history, one live Merino request — and tunnel vision is the
-expensive failure. It is not free in BigQuery, Zyte, or CloudWatch Logs Insights: dry-run, narrow the
-columns, and narrow the window before you fan out. Keep a list of every line you considered and record which you dropped and why.
+rather than following the most attractive one to its end. Tunnel vision is the failure that wastes the
+most time, and a probe that comes back negative has still moved you forward. Keep a list of every line
+you considered and record which you dropped and why.
 
 **Prefer measuring to reasoning.** Reproduce the request. Run the model on real inputs. Count the
 actual rows. Read the code path instead of assuming its behaviour. A plausible mechanism becomes a
@@ -104,8 +103,8 @@ FINDINGS.md is about the same symptom.
   root, run the first probes anyway and hold their output until you have somewhere to put it. Rewrite
   it in place, not as `FINDINGS-v2.md`.
 - `queries/` and `results/` — every query as a file, its output alongside under the same basename.
-- `api_responses/` — raw JSON from live calls. Save them even when they look boring; metered APIs
-  cost money to re-hit and the data may be gone tomorrow.
+- `api_responses/` — raw JSON from live calls. Save them even when they look boring; the same request
+  may not return the same thing tomorrow.
 - Aggregate before saving. Counts, rates, and shapes answer nearly every question these
   investigations ask; this directory sits outside any repo and gets linked into tickets, so prefer a
   distribution over a dump of rows carrying editor identities or user data.
@@ -199,8 +198,8 @@ same probe budget as one you can.
 Work the live ones in parallel rather than serially. Before firing, write beside each hypothesis the
 result that would kill it. Then issue the probes as independent tool calls in a single batch,
 backgrounding anything slow and handing a line that needs several dependent steps to a subagent so
-the batch still returns together. Cap the first wave at four or five cheap, independent probes, and
-hold metered calls and large scans for the second wave. Name each `queries/` and `results/` pair
+the batch still returns together. Keep the first wave to four or five quick, independent probes, and
+hold anything slow or wide for the second. Name each `queries/` and `results/` pair
 after its hypothesis, so a result cannot be attributed to the wrong line.
 
 Then look at what came back and do it again. Each round should either kill a line or sharpen the next
@@ -220,8 +219,7 @@ An explicit `timestamp (UTC) | observation | source` table.
 - Normalise every timestamp to UTC and label it. Timezone mismatch is a common source of phantom
   gaps, and a subtraction error can manufacture an outage that never happened.
 - Extend the window to weeks, not hours — these failures are frequently much older than the report.
-  Widen freely on the cheap planes; on a billed plane, widen only after a narrow window has shown
-  you something.
+  Start with a window you can read quickly, and widen once it shows you where to look.
 - Distinguish *first occurrence* from *first noticed*, and state both.
 - Line the window up against the deploys and config changes the prior turned up.
 - Treat retention limits as limits: a "first seen" date can be the edge of a retention window rather

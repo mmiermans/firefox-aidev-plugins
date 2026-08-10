@@ -10,7 +10,7 @@ investigating, rather than stopping or silently substituting a weaker source.
 **Keep bulk out of your context.** Several of these sources answer a small question with a very large
 payload, and a context spent on raw JSON is a context not spent on the investigation. Where the bulk
 arrives through a CLI or `curl`, redirect it to a file in the investigation directory and read back only
-the slice you need; a `bq query` or `gcloud logging read` written to disk costs you nothing. Where it
+the slice you need; a `bq query` or `gcloud logging read` written to disk stays out of context. Where it
 arrives through an MCP tool there is nothing to redirect, so hand that retrieval to a general-purpose
 subagent and keep only what it reports back. The ones that catch people out:
 
@@ -195,7 +195,7 @@ region by `get_recommendation_surface_id` in `merino/curated_recommendations/uti
 branches on experiment enrolment — it is not a reformatting of the locale string. The `SurfaceId` enum
 itself lives in `merino/curated_recommendations/corpus_backends/protocol.py`. Stratifying by locale and
 stratifying by surface are therefore not the same slice, and some surfaces are reachable only through
-enrolment. The cheapest resolution is a live response: it echoes the surface it resolved to.
+enrolment. The quickest resolution is a live response: it echoes the surface it resolved to.
 
 Merino rewrites item URLs with `utm_source=firefox-newtab-<surface-in-lower-kebab>` (`get_utm_source`
 and `update_url_utm_source` in `curated_recommendations/corpus_backends/utils.py`), so a URL from a
@@ -263,11 +263,11 @@ Traps that will silently give you a wrong answer:
   column being introduced, not the crawl changing.
 - **`crawled_date` and `published_date` are STRING; `crawled_at`, `published_at` and `loaded_at` are
   TIMESTAMP.** Use the timestamps for any time arithmetic.
-- **Cost does not work the way you expect.** `rss_feed_items` (tens of GB) and `zyte_cache` (over a
-  hundred GB) are **unpartitioned and unclustered**, so a date predicate reduces nothing — only column
-  selection does. Never `SELECT *` on them and always `--dry_run` first. The
-  `snowflake_migration_derived` tables are day-partitioned on `happened_at` but do not require a
-  partition filter, so supply one yourself.
+- **A date filter does not narrow the big tables.** `rss_feed_items` (tens of GB) and `zyte_cache`
+  (over a hundred GB) are **unpartitioned and unclustered**, so a date predicate scans the whole thing
+  anyway; only naming fewer columns reduces it. Never `SELECT *` on them, and `--dry_run` first to see
+  what a query will actually touch. The `snowflake_migration_derived` tables are day-partitioned on
+  `happened_at` but do not require a partition filter, so supply one yourself.
 - **The `*_v1` event tables are event logs, not current state.** Rows accumulate per change, so a
   plain `COUNT(*)` over-counts. Where you must reduce the log yourself, take the latest row per id and
   check the inflation ratio rather than assuming it.
@@ -345,9 +345,8 @@ queue-only.
 
 CloudWatch Logs Insights is frequently the source that cracks a case for these lambdas — it will give
 you total operation counts and per-error-type breakdowns that Sentry structurally cannot, because
-Sentry only sees what was raised. It bills per GB scanned per query, so pass a reasonably small
-`--start-time`/`--end-time` that could answer the question and `stats`-aggregate rather than dumping
-`fields`. Also useful: alarm history (transition timestamps and state-reason margins), and pulling an
+Sentry only sees what was raised. Pass a reasonably small `--start-time`/`--end-time` that could answer
+the question, and `stats`-aggregate rather than dumping `fields`. Also useful: alarm history (transition timestamps and state-reason margins), and pulling an
 anomaly band itself as a metric-math series to compare its predicted centre against reality. The crawl
 runs in GCP, not AWS, so its equivalent plane is Cloud Logging or the BigQuery log sink.
 
@@ -375,8 +374,8 @@ this file.
 
 ### Zyte
 
-Two separate APIs. The extraction API is **metered — every call costs money**, so save all responses and
-never bulk-crawl to satisfy curiosity. Check for a key with `[ -n "$ZYTE_API_KEY" ] && echo present`. Reference keys by
+Two separate APIs, both talking to a third party. Save every response, and reproduce the one or two
+URLs the question turns on rather than sweeping a domain. Check for a key with `[ -n "$ZYTE_API_KEY" ] && echo present`. Reference keys by
 variable name in anything you save, so no value lands in a query file or the transcript.
 
 **Extraction API** (`ZYTE_API_KEY`, created at https://app.zyte.com/o/612928/zyte-api/api-access)
@@ -458,7 +457,7 @@ session back up where it left off
 Then carry on. The items stay pending and visible while you work; close them when they land, and delete
 any whose line stopped mattering.
 
-Roughly ordered by how often an investigation needs them, cheapest first.
+Roughly ordered by how often an investigation needs them, and how quickly they are resolved.
 
 | Blocked source | Ask them to |
 |---|---|
