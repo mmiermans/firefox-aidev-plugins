@@ -336,7 +336,7 @@ queue-only.
 
 CloudWatch Logs Insights is frequently the source that cracks a case for these lambdas — it will give
 you total operation counts and per-error-type breakdowns that Sentry structurally cannot, because
-Sentry only sees what was raised. It bills per GB scanned per query, so pass the narrowest
+Sentry only sees what was raised. It bills per GB scanned per query, so pass a reasonably small
 `--start-time`/`--end-time` that could answer the question and `stats`-aggregate rather than dumping
 `fields`. Also useful: alarm history (transition timestamps and state-reason margins), and pulling an
 anomaly band itself as a metric-math series to compare its predicted centre against reality. The crawl
