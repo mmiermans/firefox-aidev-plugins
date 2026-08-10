@@ -96,12 +96,28 @@ Traps:
 ## Merino
 
 Reproducing the client call is often the fastest confirmation of a client-visible symptom. Each
-feature has its own endpoint, named in its section below; for recommendations it is a POST:
-`POST https://merino.services.mozilla.com/api/v1/curated-recommendations` with a JSON body carrying
-`locale`, `region`, `topics`, `sections`, `feeds` (e.g. `["sections"]`), `enableInterestPicker`, and
-optionally `experimentName` / `experimentBranch` to land on an experiment branch. Send a realistic
-Firefox `User-Agent`. Save every response. First things to check on the payload: section count,
-items per section, presence of `followable` / `allowAds`, and the age of the newest item.
+feature has its own endpoint, named in its section below. For recommendations:
+
+```bash
+curl -s https://merino.services.mozilla.com/api/v1/curated-recommendations \
+  -H 'content-type: application/json' \
+  -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:153.0) Gecko/20100101 Firefox/153.0' \
+  --data-raw '{"locale":"en-US","region":"US","topics":[],"sections":[],"feeds":["sections"],
+               "enableInterestPicker":false,"inferredInterests":null,
+               "experimentName":null,"experimentBranch":null}' \
+  -o api_responses/merino-en-US.json
+```
+
+Nothing requires curl. Pick whatever suits the moment, and reach for a short script when you need to
+vary a field across several requests or parse what comes back; either way send the body to a file.
+
+`CuratedRecommendationsRequest` in `merino/curated_recommendations/protocol.py` is the authority on
+that body, and two fields catch people out. `count` defaults to 100 when omitted, so response size is
+governed by a field you may not have set. The UTC offset is accepted as either `utcOffset` or
+`utc_offset`, must be 0 to 23, and anything else is quietly coerced to null rather than rejected. Set
+`experimentName` and `experimentBranch` to land on a branch. First things to check on the response:
+section count, items per section, presence of `followable` / `allowAds`, and the age of the newest
+item.
 
 `GET /__version__` returns the running commit and build URL. Use it before trusting a repo log:
 a merged commit is not a deployed one, and a rollback is the change that most cleanly explains a
@@ -415,8 +431,13 @@ if the pipeline discards non-allowlisted status codes.
 
 ## Picture of the Day
 
-`GET /api/v1/rss/picture-of-the-day` serves only what the daily `wikimedia_potd_updater` job put at
-`wikimedia_potd/<YYYY-MM-DD>/potd.json` in the images bucket, so today's object existing separates a
+```bash
+curl -s 'https://merino.services.mozilla.com/api/v1/rss/picture-of-the-day' -H 'Accept-Language: de-DE'
+```
+
+The response is localised to `Accept-Language` where a translation exists, so send the locale you are
+investigating rather than the default. It serves only what the daily `wikimedia_potd_updater` job put
+at `wikimedia_potd/<YYYY-MM-DD>/potd.json` in the images bucket, so today's object existing separates a
 producer problem from a serving one; a failed run is one `merino-py` Sentry event, exit code 0. The
 manifest is cached per pod against today's UTC date and a failed refresh keeps the old entry: pods
 that cached yesterday serve yesterday's picture while pods started since return `null` — both HTTP
@@ -424,9 +445,13 @@ that cached yesterday serve yesterday's picture while pods started since return 
 
 ## Crossword puzzle of the day — the `particle` provider
 
-`GET /api/v1/games/particle` only echoes a configured URL to a static site in a bucket, so a healthy
-endpoint says nothing about today's puzzle. A cron (`games_tasks update-particle`) diffs the vendor's
-`runtime-manifest.v1.json` against the bucket's copy by version, per channel — `daily` is the puzzle,
+```bash
+curl -s 'https://merino.services.mozilla.com/api/v1/games/particle'
+```
+
+It takes no parameters and returns a tiny payload, the public URL of a static site in a bucket, so a
+healthy endpoint says nothing about today's puzzle. A cron (`games_tasks update-particle`) diffs the
+vendor's `runtime-manifest.v1.json` against the bucket's copy by version, per channel — `daily` is the puzzle,
 `runtime` the engine — never by date; both manifests are public, so fetch each to see which side is
 behind. A run logs `Files updated? False` whether it was idle or failed and emits no metrics, so
 Sentry is the rest of the plane; `docs/providers/games/particle.md` has the detail.
