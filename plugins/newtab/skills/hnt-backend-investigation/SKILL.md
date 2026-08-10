@@ -23,29 +23,17 @@ clients**, meaning everyone the affected feature serves, and, where the feature 
 
 Access and traps, per system: [references/data-sources.md](references/data-sources.md)
 
-## How to think about this
+## How we like this done
 
-**Confirm the symptom before explaining it.** Independently reproduce or measure the reported
-problem first, whatever its source. An alert can be miscalibrated, mis-scoped, or watching the
-wrong layer, and a description passed through two people can drift. Until you have seen the
-symptom yourself in data you pulled, you do not know what you are diagnosing.
+You know how to investigate. These are the preferences that make an investigation here land well:
 
-**Form the hypothesis before you run the check.** Write down what you expect to see, and what you
-would expect to see if the hypothesis were false. A query designed to confirm and a query designed
-to discriminate look similar and are not. The characteristic failure in this domain is a correct
-query paired with a wrong inference, stated confidently.
-
-**Work several lines at once.** When more than one explanation is plausible, probe them in parallel
-rather than following the most attractive one to its end. Tunnel vision is the failure that wastes the
-most time, and a probe that comes back negative has still moved you forward. Keep a list of every line
-you considered and record which you dropped and why.
-
-**Prefer measuring to reasoning.** Reproduce the request. Run the model on real inputs. Count the
-actual rows. Read the code path instead of assuming its behaviour. A plausible mechanism becomes a
-number, and only numbers survive review.
-
-Write like the evidence is asymmetric, because it usually is. Avoid "always", "never", "in every
-case"; say what each count is a count of, and whether it is a floor, a ceiling, or a sample.
+- **Confirm the symptom yourself before explaining it**, whatever the source. An alert can be
+  mis-centred or watching the wrong layer, and a description passed through two people drifts.
+- **Let the data generate the hypotheses**, one round at a time, rather than enumerating everything up
+  front. Where several are live at once, probe them in parallel instead of serially.
+- **Measure rather than reason.** Reproduce the request, count the rows, read the code path. The
+  characteristic failure here is a correct query paired with a wrong inference, stated confidently.
+- **Keep going while you wait.** Blocked access and unanswered questions are not stopping points.
 
 ## Don't stall on the developer
 
@@ -65,13 +53,13 @@ name the view, the filter, and the single number or shape you need, and ask them
 
 Restate it exactly once more — whichever comes first: the unblocked lines run out, or you are three
 probes into a line you had already judged weaker than the blocked one. That is the second and last
-ask, and it does not apply if they have already answered. If there is still no response, write up and close out with `Status: blocked`,
-name the one unblock under "Could not measure", and leave the access task pending.
+ask, and it does not apply if they have already answered. If there is still no response, write up and
+close out with `Status: blocked`, name the one unblock under "Could not measure", and leave the access
+task pending.
 
 Stopping outright is a last resort: only when the blocked source is the only thing that can settle
 the question **and** it cannot be reduced to a question they can answer for you — a dashboard,
-console, or explore is almost never a real stop. A request that quietly disappears is worse than one
-that was never made.
+console, or explore is almost never a real stop.
 
 ## Workspace
 
@@ -93,30 +81,26 @@ investigations, follow the naming they use; otherwise `<mon><DD>-<slug>`, e.g.
 `jul29-empty-de-sections`. Say which directory you created. Reuse an existing one only when its
 FINDINGS.md is about the same symptom.
 
-- `FINDINGS.md` — one living document. Create it from the skeleton in the write-up step the moment the directory
-  exists, and in any case before you write a conclusion down; every step that follows writes into it as
-  it goes, so the write-up step is a final pass over a document that already exists. If you are still waiting on the
-  root, run the first probes anyway and hold their output until you have somewhere to put it. Rewrite
-  it in place, not as `FINDINGS-v2.md`.
-- `queries/` and `results/` — every query as a file, its output alongside under the same basename.
-- `api_responses/` — raw JSON from live calls. Save them even when they look boring; the same request
-  may not return the same thing tomorrow.
-- Aggregate before saving. Counts, rates, and shapes answer nearly every question these
-  investigations ask; this directory sits outside any repo and gets linked into tickets, so prefer a
-  distribution over a dump of rows carrying editor identities or user data.
-- Rewrite only the FINDINGS.md you wrote and delete only files this session created — anything else
-  in the directory belongs to another investigation.
-- Python work goes in an isolated venv inside this directory: `uv venv` if `uv` is installed,
-  otherwise `python3 -m venv`.
+- `FINDINGS.md` — one living document, from the skeleton in the write-up step. Create it once the
+  directory exists and in any case before you write a conclusion down; the steps that follow write into
+  it as they go, so the write-up step is a final pass over a document that already exists. Rewrite it in
+  place, not as `FINDINGS-v2.md`.
+- Add subdirectories only when you have something to put in them, not up front: `queries/` and
+  `results/` for each query and its output under a matching basename, `api_responses/` for raw JSON
+  from live calls. Save responses even when they look boring; the same request may not return the same
+  thing tomorrow.
+- Aggregate before saving. This directory sits outside any repo and gets linked into tickets, so prefer
+  a distribution over a dump of rows carrying editor identities or user data.
+- Rewrite only the FINDINGS.md you wrote and delete only files this session created — anything else in
+  the directory belongs to another investigation.
+- Python work goes in an isolated venv inside this directory.
 
 ## Step 1 — pin down the report
 
 Before your first probe, read [references/data-sources.md](references/data-sources.md). It carries the
 traps that silently return wrong answers, and several of them look like an outage.
 
-Establish these five facts from the data. The alert or issue carries the symptom and its volume,
-stratifying gives you the surface and locale, and a live request tells you whether it is still
-happening.
+Establish these five facts from the data.
 
 | Fact | Why it matters |
 |---|---|
@@ -126,143 +110,106 @@ happening.
 | The stratum — surface, locale, section, client version, or for a daily artifact the date | The stratum is very often the diagnosis |
 | Still happening right now? | Live reproduction vs. historical forensics |
 
-**If it is still happening, capture the perishable evidence first** — a live request for the feature,
-current logs, and whatever counts or artifact it publishes — and save the raw responses under
-`api_responses/`. Establish what normal is while those probes are in flight; history
-keeps, live signal does not.
+If it is still happening, capture the perishable evidence first — a live request for the feature,
+current logs, whatever counts or artifact it publishes — and establish what normal is while those
+probes are in flight. History keeps; live signal does not.
 
-**An error-rate signal is not yet a symptom.** Measure the erroring stage's *output* to fix the
-blast radius — items per section and per-surface freshness for assembly, the newest object under a
-dated prefix for a publish job, a live Merino request for anything client-facing — so you can say
-whether Firefox clients are affected at all. An error floor that never reaches the output is a
-not-incident; errors flat with output at zero is worse than the alert says. And when the report is an
-alert rather than something someone saw, confirm the signal itself before chasing the system behind
-it: an alert can be mis-centred, watching the wrong layer, or counting over the wrong period.
+**An error rate is not yet a symptom.** Measure the erroring stage's *output* to fix the blast radius:
+items per section and per-surface freshness for assembly, the newest object under a dated prefix for a
+publish job, a live Merino request for anything client-facing. An error floor that never reaches the
+output is a not-incident; errors flat with output at zero is worse than the alert says.
 
-**If you cannot reproduce it, that is a result, not a blocker.** Record the exact attempt — surface,
-locale, time, request, what you saw instead — then switch the question to why the reporter saw it
-and you do not: a stratum you did not hit, a window that has closed, a cache, a client version, or a
-monitor measuring something other than what it claims. Classify as `not-incident` only after that
-second question has an answer; unconfirmed is not refuted.
+**Failing to reproduce is a result, not a blocker.** Record the exact attempt, then switch the question
+to why the reporter saw it and you do not: a stratum you did not hit, a closed window, a cache, a client
+version, or a monitor measuring something other than what it claims. `not-incident` needs an answer to
+that second question; unconfirmed is not refuted.
 
 A report relayed from an editor is ambiguous between what editors see in curation-admin-tools and
-what clients see on the surface. Probe both in parallel and state which group you confirmed.
-
-The moment you confirm client-visible impact that is still happening, state it in one line — what,
-how big, since when — and keep investigating. If that deserves a heads-up in `#hnt-dev-be-alerts`,
-follow the posting rule under "Posting to `#hnt-dev-be-alerts`".
+what clients see on the surface. Probe both and state which group you confirmed. Once client-visible
+impact is confirmed and still happening, say so in one line — what, how big, since when — and keep
+going.
 
 ## Step 2 — establish what "normal" is
 
-You do not know what is currently normal in this system, so you have no basis on which to reject
-your own inference. Build that prior yourself before asking for it — most of it is in reach:
+You have no idea what is currently normal here, so you have no basis on which to reject your own
+inference. Derive the prior rather than asking for it:
 
 - **What the serving path returns now** — a live request for the feature; for recommendations, the
   surfaces present and not disabled in the section data.
 - **What the producer last wrote** — per-surface, per-source crawl volume over the last day for
   recommendations, the newest object under the dated bucket prefix for a publish job. Producer and
   serving sets differ, and a crawled surface with no sections is not automatically a bug.
-- **What shipped recently** — recent commits in the service repos, releases in Sentry, timestamps on
-  model or config artifacts.
+- **What shipped recently** — commits in the service repos, releases in Sentry, timestamps on model or
+  config artifacts.
 - **Whether this is normally noisy or seasonal** — a trailing profile of the same metric, by day of
   week. Do not ask; compute it.
-- **Whether it has happened before** — search Sentry for the same signature and the service repos'
-  GitHub issues. Where one of those is unreachable, record it as unchecked rather than empty; "nothing
-  similar has fired" is a claim about a source you actually read.
+- **Whether it has happened before** — Sentry for the same signature, and the service repos' GitHub
+  issues. Where one is unreachable, record it as unchecked rather than empty.
 
-What is left is genuinely in the developer's head: anything in flight that a repo or a dashboard
-would not show, and whether a postmortem or incident register already covers this area. Raise that
-as one short note and carry on without waiting; an existing write-up can answer in a paragraph what
-costs hours to reconstruct.
+What is left is genuinely in the developer's head: anything in flight that a repo or dashboard would
+not show, and whether a postmortem or incident register already covers this area. Raise that as one
+short note and carry on without waiting.
 
-Record what you derive and what they tell you in FINDINGS.md, keeping the two apart. When a later
-query contradicts the prior, treat your own inference as the suspect first, and say so.
+Keep what you derived and what they told you apart in FINDINGS.md. When a later query contradicts the
+prior, treat your own inference as the suspect first, and say so.
 
 ## Step 3 — form hypotheses from the data, then probe them in parallel
 
-Hypotheses come from what you have already measured, not from a catalogue. Start where pinning down
-the report put you: the stage whose output is wrong, the stratum that is affected, the moment it changed. Ask what
-could produce exactly that, follow the data one hop upstream, and let each result generate the next
-question. A hypothesis you cannot tie to something you have observed is a guess competing for the
-same probe budget as one you can.
+Start where pinning down the report left you: the stage whose output is wrong, the affected stratum,
+the moment it changed. Ask what could produce exactly that, follow the data one hop upstream, and let
+each result raise the next question.
 
-Work the live ones in parallel rather than serially. Before firing, write beside each hypothesis the
-result that would kill it. Then issue the probes as independent tool calls in a single batch,
-backgrounding anything slow and handing a line that needs several dependent steps to a subagent so
-the batch still returns together. Keep the first wave to four or five quick, independent probes, and
-hold anything slow or wide for the second. Name each `queries/` and `results/` pair
-after its hypothesis, so a result cannot be attributed to the wrong line.
+Work the live hypotheses in parallel. Write beside each one the result that would kill it, then issue
+the probes as independent calls in a single batch, handing any line that needs several dependent steps
+to a subagent. Keep the first wave small and quick, and hold anything slow or wide for the second.
+Name each query file after its hypothesis so a result cannot be attributed to the wrong line.
 
-Then look at what came back and do it again. Each round should either kill a line or sharpen the next
-question; when a round kills everything, the data has moved you upstream rather than left you stuck.
-Being down to a single surviving hypothesis is a prompt, not an answer: ask what else could produce
-exactly what you measured before you commit to it.
-
-Two moves consistently break cases open: **leave the tool you started in** — when a source stops
-yielding, measure the same thing somewhere else, since the failure is often invisible in the plane
-you began with — and **compare against sibling strata**, which localises a fault faster than reading
-code.
+Then look at what came back and do it again. Being down to one surviving hypothesis is a prompt, not an
+answer: ask what else could produce what you measured before committing to it. And when a source stops
+yielding, measure the same thing in another plane — the failure is often invisible in the one you
+started in.
 
 ## Step 4 — build the timeline
 
-An explicit `timestamp (UTC) | observation | source` table.
+An explicit `timestamp (UTC) | observation | source` table. Normalise and label every timestamp, since
+a subtraction error can manufacture an outage that never happened. Extend the window to weeks rather
+than hours; these failures are frequently older than the report. Distinguish first occurrence from
+first noticed, line the window up against the deploys the prior turned up, and remember that a source
+with a retention window cannot establish onset — its earliest record may simply be its oldest.
 
-- Normalise every timestamp to UTC and label it. Timezone mismatch is a common source of phantom
-  gaps, and a subtraction error can manufacture an outage that never happened.
-- Extend the window to weeks, not hours — these failures are frequently much older than the report.
-  Start with a window you can read quickly, and widen once it shows you where to look.
-- Distinguish *first occurrence* from *first noticed*, and state both.
-- Line the window up against the deploys and config changes the prior turned up.
-- A source with a retention window cannot establish onset: its earliest record may simply be its
-  oldest.
-- **The scheduling layer is not in UTC.** Scheduled dates and the assembly crons run in each surface's
-  own timezone, so a UTC comparison invents a one-day gap for part of every day on any surface offset
-  from UTC — worst for the Americas, and `en-US` is the largest surface. Convert per surface, and say
-  which timezone you used.
+**The scheduling layer is not in UTC.** Scheduled dates and the assembly crons run in each surface's
+own timezone, so a UTC comparison invents a one-day gap for part of every day on any surface offset
+from UTC — worst for the Americas, and `en-US` is the largest surface. Convert per surface, and say
+which timezone you used.
 
 ## Step 5 — stratify before concluding anything
 
-An aggregate that looks fine is the normal way these problems hide. Slice every metric by the
-dimensions the feature actually has — for recommendations **domain, locale, region, surface, section,
-experiment branch, and client/addon version**, for a once-a-day global artifact barely more than the
-date — and look for a single stratum at zero or down sharply against its own trailing median rather
-than against yesterday. When the report says "some users" with no stratum attached, treat experiment branch,
-region, and rollout state as the first cuts — some surfaces are reachable only through experiment
-enrolment, so an enrolled/unenrolled split is invisible to a locale slice.
+An aggregate that looks fine is the normal way these problems hide. Slice by the dimensions the feature
+actually has — for recommendations **domain, locale, region, surface, section, experiment branch, and
+client/addon version**, for a once-a-day global artifact barely more than the date — and look for a
+single stratum at zero or down sharply against its own trailing median rather than against yesterday.
+When the report says "some users" with no stratum attached, try experiment branch, region and rollout
+state first: some surfaces are reachable only through enrolment, which a locale slice cannot see.
 
-Strata are not interchangeable, and the volumes are strongly seasonal; both traps, and the
-per-surface source mix, are detailed in `references/data-sources.md`. Compare each stratum against
-its own history.
+**Liveness is not health.** "The job ran successfully" is compatible with total data loss in every one
+of these pipelines. Count what came out and compare it against what went in.
 
-**Liveness is not health.** "The job ran successfully" is compatible with total data loss in every
-one of these pipelines. Count what came out, compare it against what went in, and never accept a
-green run as evidence.
-
-If the measurements exonerate the backend, stop at the service boundary. Read far enough to name the
-owning team and the contract that is being broken, then hand it over rather than continuing into a
-system this skill does not cover. A second, unrelated anomaly you trip over on the way is a one-line
-note plus a task, not a second investigation.
+If the measurements exonerate the backend, stop at the service boundary: name the owning team and the
+contract being broken, and hand it over. A second, unrelated anomaly you trip over on the way is a
+one-line note plus a task, not a second investigation.
 
 ## Step 6 — try to break your own conclusion
 
-Before writing anything down as fact, attack it:
+Before writing anything down as fact, check the boring explanations: a filter in your own query, a
+silent truncation, an unrepresentative code path, a column that does not mean what its name says, a
+partially-launched feature. Then verify the outcome and not just the mechanism — a guard that provably
+runs is not evidence that its effect is correct — and cross-check against a second, independent source,
+because one source is a hypothesis.
 
-- Check the boring explanations first: timezone; a filter in your own query; a `LIMIT` silently
-  truncating; an unrepresentative code path; sampling; a column that does not mean what its name
-  says; a partially-launched feature.
-- Then attack the mechanism itself, with whichever of these would break yours: read the code path
-  rather than assuming it; enumerate exactly instead of sampling, since "0 of N" is a different claim
-  from "none in my sample"; repeat a suspicious observation before calling anything
-  non-deterministic; read the real limit rather than guessing which one binds; and check the history
-  of the constant or config you are relying on.
-- **Measure the effect, not just the mechanism.** A guard that provably runs is not evidence that
-  the outcome is correct; verify the outcome separately.
-- Cross-check against a second, independent source. One source is a hypothesis.
-- Re-read the prior you established. If your conclusion implies that something it says is working is
-  broken, re-check your own measurement first — a filter in your query, a stratum mismatch, or a
-  wrong surface identifier is the likelier explanation. If the measurement survives that re-check,
-  the measurement wins: state the contradiction explicitly in FINDINGS.md, note it to the developer
-  in one line, and keep going.
+Re-read the prior. If your conclusion implies that something the prior says is working is broken,
+re-check your own measurement first; a stratum mismatch or a wrong surface identifier is the likelier
+explanation. If the measurement survives that, the measurement wins: state the contradiction in
+FINDINGS.md, note it to the developer in one line, and keep going.
 
 Mark every claim **verified**, **inferred**, or **refuted**. Keep the refuted ones in the document;
 they stop the next person re-running them.
@@ -284,8 +231,7 @@ Three sentences: what broke, since when, what the user-visible effect is.
 | Time | Observation | Source |
 
 ## Prior
-**Derived** — the feature's own volumes or published artifacts, recent deploys and model artifacts,
-trailing profile, prior occurrences. Each with the query or link.
+**Derived** — what you measured, each with the query or link.
 **Reported** — verbatim answers from the developer, or `asked <time UTC>, no answer received`.
 
 ## Evidence
@@ -297,14 +243,13 @@ directory.
 The mechanism, with the code path or config that produces it. "Not established" when it is not.
 
 ## Hypotheses considered and dropped
-Every line you enumerated, and what ruled each one out — or why it was not pursued.
+What you ruled out, and what ruled it out.
 
 ## Impact quantified
 Rows, requests, users, hours, locales. A number, or an explicit "unquantified because X".
 
 ## Proposed fix
-The change as a diff in this document, at file-and-line where you can get there, produced by
-reading the clones.
+The change as a diff, at file-and-line where you can get there.
 
 ## Could not measure
 Any telemetry plane you could not reach, and the access that would unblock it.
@@ -312,12 +257,12 @@ Any telemetry plane you could not reach, and the access that would unblock it.
 
 ## Step 8 — close the loop
 
-- **Report what you could not reach.** Missing dashboard, IAM, token, or VPN access is a finding,
-  not an inconvenience to route around. Leave any unresolved access task on the list rather than
-  clearing it.
+- **Report what you could not reach.** Missing dashboard, IAM, token, or VPN access is a finding, not
+  an inconvenience to route around. Leave any unresolved access task on the list rather than clearing
+  it.
 - **Link prior art** — older investigation, ticket, postmortem, or a related error already known.
-- **Leave the follow-up as a task**, owned by whoever will act: confirm the fix shipped and the
-  metric actually recovered. State that you have done so rather than asking whether to.
+- **Leave the follow-up as a task**, owned by whoever will act: confirm the fix shipped and the metric
+  actually recovered. State that you have done so rather than asking whether to.
 - Hand back a two-line verdict plus the FINDINGS.md path. Do not paste the document into chat.
 
 ### Posting to `#hnt-dev-be-alerts`
