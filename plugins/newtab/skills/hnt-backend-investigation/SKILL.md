@@ -179,8 +179,8 @@ each result raise the next question.
 
 Work the live hypotheses in parallel. Write beside each hypothesis the result that would kill it, then
 issue them as parallel calls in a single batch, handing any line that needs several dependent steps to
-a subagent. Keep the first wave small and quick, and hold anything slow or wide for the second. Name each query file after its hypothesis so a
-result cannot be attributed to the wrong line.
+a subagent. Keep the first wave small and quick, and hold anything slow or wide for the second. Name
+each query file after its hypothesis so a result cannot be attributed to the wrong line.
 
 Then look at what came back and do it again. Being down to one surviving hypothesis is a prompt, not an
 answer: ask what else could produce what you measured before committing to it. And when a source stops
