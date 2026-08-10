@@ -153,13 +153,22 @@ environment, and the dev constant beside it is unused — so stage Merino reads 
 | `serverless-image-cache` | Pocket/serverless-image-cache | Thumbor image resize and cache |
 | `firefox` | mozilla-firefox/firefox | Client side of the contract (`browser/extensions/newtab`) |
 
-### Vocabulary: surface, locale, section, assembly
+### Vocabulary: surface, locale, section, editorial section, assembly
 
 A **surface** is one locale/market feed of the corpus, written `NEW_TAB_EN_US`. A **section** is a
 topic row inside a surface. **Assembly** is the ML stage that decides which corpus items sit in which
 section for a surface; it runs as Metaflow flows in `content-ml-services` and reaches the corpus
 through SQS, and the stage is called several things across these repos, so pin down which one a claim
 refers to.
+
+An **editorial section**, called a **Custom Section** in the tooling, is one the editorial team creates
+and maintains by hand rather than one assembly produced: `createSource` / `updateSource` of `MANUAL` in
+corpus MySQL, against `ML` for an assembled one. So an empty editorial section and an empty assembled
+section have disjoint causes, and establishing which kind you are looking at comes before anything
+else. Editors manage them at
+https://curation-admin-tools.readitlater.com/curated-corpus/custom-sections/, and one section is at
+`.../custom-sections/<externalId>/<surface>/` — a link worth handing to the developer when the question
+is what a section was meant to contain, since reaching it needs an editor session.
 
 Merino's request `locale` is hyphenated (`en-US`) and the surface is **derived** from language plus
 region by `get_recommendation_surface_id` in `merino/curated_recommendations/utils.py`, which also
