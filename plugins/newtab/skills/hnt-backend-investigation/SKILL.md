@@ -84,9 +84,9 @@ investigations in. Do not assume where that root is. Establish it in this order:
    be derived, and guessing puts files somewhere they did not choose. Ask it as a single question at
    the start, and start pinning down the report while you wait rather than idling.
 3. **Then remember it**, so the question is asked once per machine rather than once per investigation.
-   Record the root and the one-subdirectory-per-investigation convention in **user-scope** memory,
-   `~/.claude/CLAUDE.md`, and say that you saved it. Not auto memory: that is keyed to the repository
-   you were launched from, while investigations get started from whichever service repo is to hand.
+   Remember the root and the one-subdirectory-per-investigation convention, and say that you saved it.
+   It has to persist for **every** repository, not only the one you happen to be in: investigations get
+   started from whichever service repo is to hand.
 
 Then create this investigation's subdirectory inside that root. If the root already holds
 investigations, follow the naming they use; otherwise `<mon><DD>-<slug>`, e.g.
