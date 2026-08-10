@@ -79,18 +79,14 @@ Each investigation gets its own subdirectory inside one root directory that the 
 investigations in. Do not assume where that root is. Establish it in this order:
 
 1. **Check the instructions you were already given.** A root recorded on an earlier run is already in
-   front of you: user-scope instructions load automatically at the start of every session. If they
-   name a root, use it and do not ask.
+   front of you, in your loaded instructions. If they name one, use it and do not ask.
 2. **Otherwise ask, once, before your first write.** Where the developer keeps investigations cannot
    be derived, and guessing puts files somewhere they did not choose. Ask it as a single question at
    the start, and start pinning down the report while you wait rather than idling.
-3. **Then record it**, so the question is asked once per machine rather than once per investigation.
-   Add one line to `~/.claude/CLAUDE.md`, creating that file if it does not exist:
-   `Investigations live in <path> (one subdirectory per investigation).` That is the user scope, the
-   one that applies whichever repository you are launched from, and it will be loaded for you from the
-   next session onward. Say that you saved it. Do not put this in auto memory, which is keyed to the
-   repository you were launched from, while investigations get started from whichever service repo is
-   to hand.
+3. **Then remember it**, so the question is asked once per machine rather than once per investigation.
+   Record the root and the one-subdirectory-per-investigation convention in **user-scope** memory,
+   `~/.claude/CLAUDE.md`, and say that you saved it. Not auto memory: that is keyed to the repository
+   you were launched from, while investigations get started from whichever service repo is to hand.
 
 Then create this investigation's subdirectory inside that root. If the root already holds
 investigations, follow the naming they use; otherwise `<mon><DD>-<slug>`, e.g.
