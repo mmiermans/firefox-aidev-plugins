@@ -134,15 +134,10 @@ keeps, live signal does not.
 **An error-rate signal is not yet a symptom.** Measure the erroring stage's *output* to fix the
 blast radius — items per section and per-surface freshness for assembly, the newest object under a
 dated prefix for a publish job, a live Merino request for anything client-facing — so you can say
-whether Firefox clients are affected at all. An
-error floor that never reaches the output is a not-incident; errors flat with output at zero is
-worse than the alert says. When the report is a Sentry alert, resolve it to a concrete error and a
-volume, and decompose the issue by error message before trusting its title or its trend. An alert
-can be mis-centred, watching the wrong layer, or counting per open period rather than per day, so
-confirm the signal itself before chasing the system behind it.
-
-Sentry is the plane most of this reads from, so if the `mcp__sentry__` tools are absent, say so and
-raise it like any other blocked source, then carry on with the planes you do have.
+whether Firefox clients are affected at all. An error floor that never reaches the output is a
+not-incident; errors flat with output at zero is worse than the alert says. And when the report is an
+alert rather than something someone saw, confirm the signal itself before chasing the system behind
+it: an alert can be mis-centred, watching the wrong layer, or counting over the wrong period.
 
 **If you cannot reproduce it, that is a result, not a blocker.** Record the exact attempt — surface,
 locale, time, request, what you saw instead — then switch the question to why the reporter saw it
@@ -218,8 +213,8 @@ An explicit `timestamp (UTC) | observation | source` table.
   Start with a window you can read quickly, and widen once it shows you where to look.
 - Distinguish *first occurrence* from *first noticed*, and state both.
 - Line the window up against the deploys and config changes the prior turned up.
-- Treat retention limits as limits: a "first seen" date can be the edge of a retention window rather
-  than onset. See `references/data-sources.md`.
+- A source with a retention window cannot establish onset: its earliest record may simply be its
+  oldest.
 - **The scheduling layer is not in UTC.** Scheduled dates and the assembly crons run in each surface's
   own timezone, so a UTC comparison invents a one-day gap for part of every day on any surface offset
   from UTC — worst for the Americas, and `en-US` is the largest surface. Convert per surface, and say
