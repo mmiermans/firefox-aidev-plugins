@@ -209,8 +209,8 @@ Confirm that last hop on the first item you trace rather than assuming it.
 `bq` ships with the Google Cloud SDK and runs on your `gcloud` credentials, so a missing binary or an
 unauthenticated session is the first thing to rule out, ahead of any dataset permission: `gcloud auth
 list` shows whether there is an active account. The same credentials cover the `gcloud logging` and
-GCS reads above. Confirm the billing project with a `--dry_run` before the first real query; a
-personal sandbox is usually `moz-fx-dev-<ldap>-sandbox`. Anything missing there is an access task, and
+GCS reads above. Confirm the billing project with a `--dry_run` before the first real query; try
+`mozdata-nonprod` first, then a personal sandbox, usually `moz-fx-dev-<ldap>-sandbox`. Anything missing there is an access task, and
 authenticating is interactive so it belongs to the developer.
 
 Corpus, section and crawl state:
@@ -222,7 +222,7 @@ Corpus, section and crawl state:
 | `moz-fx-data-shared-prod.snowflake_migration_derived.sections_v1` | Section existence, enable/disable state, and surface, as an event stream |
 | `moz-fx-data-shared-prod.snowflake_migration_derived.section_items_v1` | Which items sit in which section, and when each was last touched — the freshness check for a stalled section |
 | `moz-fx-data-shared-prod.snowflake_migration_derived.corpus_items_current_v1` | One row per corpus item, deduped — but it keeps the latest row even when that row is a removal, so filter status yourself |
-| `moz-fx-data-shared-prod.snowflake_migration_derived.scheduled_corpus_items` | Scheduled items; one row per item in practice |
+| `moz-fx-data-shared-prod.snowflake_migration_derived.scheduled_corpus_items` | Scheduled items; one row per item in practice. Nearly every market has moved from scheduled items to sections, so thin or absent scheduling is the migration rather than a fault — check whether the surface still schedules at all before reading anything into it |
 
 Client-side telemetry, which is the only plane that answers "how many users" and the only one carrying
 experiment branch or browser version:
@@ -291,8 +291,8 @@ access or VPN — it fires on the first aggregate over `SectionItem`. Lift the e
 Schema `curation_corpus`. The tables that matter: `ApprovedItem` (the corpus itself, keyed by
 `externalId` and `url`), `SectionItem` and `Section` (placement and section config — `Section` also
 carries `createSource` / `updateSource` / `deactivateSource`, the authoritative ML-vs-manual
-ownership), `ScheduledItem` (surface scheduling, and its `scheduledDate` is a zoneless calendar date in
-the surface's own timezone), `RejectedCuratedCorpusItem`, and the `PublisherDomain` / `TrustedDomain` /
+ownership), `ScheduledItem` (surface scheduling, largely superseded by sections, and its `scheduledDate`
+is a zoneless calendar date in the surface's own timezone), `RejectedCuratedCorpusItem`, and the `PublisherDomain` / `TrustedDomain` /
 `ExcludedDomain` domain lists. `SectionItem` runs into the millions of rows and `ApprovedItem` into the
 hundreds of thousands — check indexes with `SHOW INDEX` before filtering, since several obvious filter
 columns are unindexed.
@@ -431,7 +431,7 @@ Roughly ordered by how often an investigation needs them, cheapest first.
 |---|---|
 | `gcloud` installed but not authenticated | `gcloud auth login`, plus `gcloud auth application-default login` if you need the Python client libraries |
 | `gcloud` or `bq` not installed | Install the Google Cloud SDK, which provides both |
-| No billing project configured | Name one they can bill, usually `moz-fx-dev-<ldap>-sandbox`, or set it with `gcloud config set project <id>` |
+| No billing project configured | Confirm you can bill `mozdata-nonprod`, or name their personal sandbox, usually `moz-fx-dev-<ldap>-sandbox`; either can be set with `gcloud config set project <id>` |
 | No `mcp__sentry__` tools at all | `claude mcp add --scope user --transport http sentry https://mcp.sentry.dev/mcp`, then `/mcp` in the restarted session to authenticate |
 | Sentry connected but unauthenticated or scoped too narrowly | `/mcp`, and authenticate for the `mozilla` org. Or read back the issue's event counts broken down by error message |
 | Corpus MySQL hangs rather than erroring | Connect to Mozilla VPN, then say so; if it still hangs the login path itself is stale |
