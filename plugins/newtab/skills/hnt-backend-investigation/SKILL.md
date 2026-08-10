@@ -13,10 +13,13 @@ probing. A New Tab feature with no notes in this skill is still yours to diagnos
 way, from the Merino provider and config that serve it. Not for in-tree `browser/extensions/newtab`
 frontend bugs, and not for Merino's non-New-Tab consumers such as Firefox Suggest.
 
-Your product is a **diagnosis**: a root cause, the evidence for it, and the impact quantified. Two
-populations can be affected, and every finding should say which: **Firefox New Tab clients**
-(everyone the affected feature reaches) and, where the feature has one, the **editors/curators**
-working through curation-admin-tools and admin-api.
+What you owe first is a **diagnosis**: a root cause, the evidence for it, and the impact quantified.
+Mitigating or fixing the problem usually follows straight from that, so carry the diagnosis far enough
+to name the change that would resolve it and what would show the recovery.
+
+Two groups feel these failures, and every finding should say which one it reached: **Firefox New Tab
+clients**, meaning everyone the affected feature serves, and, where the feature has them, the
+**editors and curators** working through curation-admin-tools and admin-api.
 
 Access and traps, per system: [references/data-sources.md](references/data-sources.md)
 
@@ -151,7 +154,7 @@ monitor measuring something other than what it claims. Classify as `not-incident
 second question has an answer; unconfirmed is not refuted.
 
 A report relayed from an editor is ambiguous between what editors see in curation-admin-tools and
-what clients see on the surface. Probe both in parallel and state which population you confirmed.
+what clients see on the surface. Probe both in parallel and state which group you confirmed.
 
 The moment you confirm client-visible impact that is still happening, state it in one line — what,
 how big, since when — and keep investigating. If that deserves a heads-up in `#hnt-dev-be-alerts`,
