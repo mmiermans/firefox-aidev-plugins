@@ -15,12 +15,12 @@ lookups belong nowhere in this skill.
 
 - The features behind the page, and where to look for one this file does not name
 - Sentry — projects and the traps in reading them
-- Slack — `#hnt-dev-be-alerts`, as alert history and as where updates go
 - Merino — live requests, deployed revision, GCP projects, ranking inputs, the serve-stale cache
 - **Content recommendations** — the pipeline and repos, vocabulary, BigQuery, corpus MySQL, the
   editor plane, AWS, assembly cadence, experiment enrolment, Zyte
 - **Picture of the Day** — the daily publish job, and the cache that serves yesterday or nothing
 - **Crossword puzzle of the day** — the vendor mirror, and the two manifests that date it
+- Slack — `#hnt-dev-be-alerts`, where updates get posted
 - **Access requests** — the one-line ask for each gated source
 
 ## The features behind the page
@@ -47,8 +47,8 @@ event-search tool over issue-search when you need a volume breakdown by error me
 alone will not decompose an umbrella fingerprint.
 
 If no `mcp__sentry__` tools are present the server is not set up in this session; see Access requests
-for the setup errand. Meanwhile service logs and the BigQuery log sink cover part of the same ground,
-and the developer can read event counts off the Sentry web UI for you.
+for the setup errand. Do not spend effort reaching Sentry any other way than through the MCP. Service
+logs and the BigQuery log sink cover part of the same ground in the meantime.
 
 The HNT services are in the **`mozilla`** organisation, prefixed `hnt-`; issue short-ids look like
 `HNT-CRAWL-9`.
@@ -71,17 +71,8 @@ Traps:
   attributing anything to today, and check whether a floor *changed* rather than whether it exists.
 - Decompose an issue by error message before trusting its title or trending it.
 - Absence of events is weak evidence: a process that dies at startup, a job that drops items while
-  reporting success, and a write path disabled by a config flag all emit nothing.
-
-## Slack
-
-`#hnt-dev-be-alerts` carries the backend alerts for this stack, which makes it two things at once: a
-record of what has already fired, worth searching in step 2 before you conclude something is new, and
-the place investigation updates go. Its tools are prefixed `mcp__slack__`; see Access requests if they
-are absent. Reading the channel is free. Posting needs the developer's approval
-for **each** message, and prefers a reply in the existing alert thread over a new one: the rule is at
-the end of step 8 in SKILL.md. With no Slack tools, alert history is **unchecked**, not empty — do not
-record "nothing similar has fired" on the strength of a source you could not read.
+  reporting success, a write path disabled by a config flag, and a service whose Sentry integration is
+  misconfigured or disabled for that environment all emit nothing.
 
 ## Merino
 
@@ -377,6 +368,13 @@ endpoint says nothing about today's puzzle. A cron (`games_tasks update-particle
 `runtime` the engine — never by date; both manifests are public, so fetch each to see which side is
 behind. A run logs `Files updated? False` whether it was idle or failed and emits no metrics, so
 Sentry is the rest of the plane; `docs/providers/games/particle.md` has the detail.
+
+## Slack
+
+`#hnt-dev-be-alerts` is where investigation updates go. Posting needs the developer's approval for
+**each** message and prefers a reply in the thread of the alert that started this, so locating that
+one message is what the `mcp__slack__` tools are for here; the rule is at the end of step 8 in
+SKILL.md. See Access requests if the tools are absent.
 
 ## Access requests
 
