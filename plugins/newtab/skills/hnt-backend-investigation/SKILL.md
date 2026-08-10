@@ -177,10 +177,13 @@ Start where pinning down the report left you: the stage whose output is wrong, t
 the moment it changed. Ask what could produce exactly that, follow the data one hop upstream, and let
 each result raise the next question.
 
-Work the live hypotheses in parallel. Write beside each one the result that would kill it, then issue
-the probes as independent calls in a single batch, handing any line that needs several dependent steps
-to a subagent. Keep the first wave small and quick, and hold anything slow or wide for the second.
-Name each query file after its hypothesis so a result cannot be attributed to the wrong line.
+Work the live hypotheses in parallel, and where you have the choice, pick lines that are independent of
+each other: a different stage, a different plane, a different assumption. Two probes that would fail
+for the same reason are one probe, and a wave built on a single shared premise dies all at once. Write
+beside each hypothesis the result that would kill it, then issue them as parallel calls in a single
+batch, handing any line that needs several dependent steps to a subagent. Keep the first wave small and
+quick, and hold anything slow or wide for the second. Name each query file after its hypothesis so a
+result cannot be attributed to the wrong line.
 
 Then look at what came back and do it again. Being down to one surviving hypothesis is a prompt, not an
 answer: ask what else could produce what you measured before committing to it. And when a source stops
