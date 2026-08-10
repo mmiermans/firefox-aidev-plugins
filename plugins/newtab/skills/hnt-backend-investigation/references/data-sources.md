@@ -46,19 +46,9 @@ Reachable through the Sentry MCP server (its tools are prefixed `mcp__sentry__`)
 event-search tool over issue-search when you need a volume breakdown by error message — issue search
 alone will not decompose an umbrella fingerprint.
 
-**If no `mcp__sentry__` tools are available, the server is not set up in this session, and you should
-say so immediately.** Do not weigh this one against your other lines first; most symptoms here are
-error-shaped, and steps 1, 2 and 6 all read from Sentry, so an investigation without it is working
-half-blind. Raise it as a `User action:` task with the command:
-
-```
-! claude mcp add --scope user --transport http sentry https://mcp.sentry.dev/mcp
-```
-
-followed by `/mcp` to authenticate in the browser. Servers load when a session starts, so the tools
-may not appear until Claude Code is restarted. Keep going meanwhile: service logs and the BigQuery log
-sink cover part of the same ground, and the developer can read event counts off the Sentry web UI for
-you in the interim.
+If no `mcp__sentry__` tools are present the server is not set up in this session; see Access requests
+for the setup errand. Meanwhile service logs and the BigQuery log sink cover part of the same ground,
+and the developer can read event counts off the Sentry web UI for you.
 
 The HNT services are in the **`mozilla`** organisation, prefixed `hnt-`; issue short-ids look like
 `HNT-CRAWL-9`.
@@ -87,16 +77,8 @@ Traps:
 
 `#hnt-dev-be-alerts` carries the backend alerts for this stack, which makes it two things at once: a
 record of what has already fired, worth searching in step 2 before you conclude something is new, and
-the place investigation updates go. Its tools are prefixed `mcp__slack__`. Install it through the
-official plugin rather than a bare `mcp add`, because the server does not support dynamic client
-registration and a plain add will connect-fail:
-
-```
-/plugin install slack@claude-plugins-official
-```
-
-The OAuth round trip needs a fixed local callback port, so it can collide with another session doing
-the same thing at the same moment. Reading the channel is free. Posting needs the developer's approval
+the place investigation updates go. Its tools are prefixed `mcp__slack__`; see Access requests if they
+are absent. Reading the channel is free. Posting needs the developer's approval
 for **each** message, and prefers a reply in the existing alert thread over a new one: the rule is at
 the end of step 8 in SKILL.md. With no Slack tools, alert history is **unchecked**, not empty — do not
 record "nothing similar has fired" on the strength of a source you could not read.
@@ -398,25 +380,38 @@ Sentry is the rest of the plane; `docs/providers/games/particle.md` has the deta
 
 ## Access requests
 
-Raise one of these when the source looks promising, then keep working. The two Sentry rows are the
-exception: raise those on sight, per step 1. Each is a short errand, so give the developer the command
-rather than a description of the problem.
+Raise one of these when the source looks promising, then keep working. Give the command, not a
+description of the problem.
+
+**How to ask.** Put the errand on the todo list, one item per step, each prefixed `User action:` so it
+reads as theirs rather than yours, with the whole instruction in the item text. The commands below run
+in the developer's own shell, so say **"in a new terminal"** rather than expecting them to run inside
+this session. Where the fix changes which tools Claude Code has — installing an MCP server, exporting
+a key into the environment — the change only takes effect on a fresh start, so make the **last** item:
+
+```
+User action: restart Claude Code in this directory with `claude --continue`, which picks this
+session back up where it left off
+```
+
+Then carry on. The items stay pending and visible while you work; close them when they land, and delete
+any whose line stopped mattering.
 
 | Blocked source | Ask them to |
 |---|---|
 | Corpus MySQL hangs rather than erroring | Connect to Mozilla VPN, then say so; if it still hangs the login path itself is stale |
 | No read-only MySQL login path configured | Create one: `mysql_config_editor set --login-path=prod-curated-corpus-api-readonly --host=<host> --user=<user> --password`, and tell you the path name |
-| AWS SSO session expired | Run `! aws --profile <profile> sso login`, so the output lands here |
-| No AWS profile at all | Run `! aws configure sso` for a read-only role, or name a profile already in their `~/.aws/config` |
+| AWS SSO session expired | `aws --profile <profile> sso login` |
+| No AWS profile at all | `aws configure sso` for a read-only role, or have them name a profile already in their `~/.aws/config` |
 | `gcloud` or `bq` not installed | Install the Google Cloud SDK, which provides both |
-| `gcloud` installed but not authenticated | Run `! gcloud auth login`, and `! gcloud auth application-default login` as well if you need the Python client libraries |
+| `gcloud` installed but not authenticated | `gcloud auth login`, plus `gcloud auth application-default login` if you need the Python client libraries |
 | No billing project configured | Name one they can bill, usually `moz-fx-dev-<ldap>-sandbox`, or set it with `gcloud config set project <id>` |
 | Permission denied on a dataset or a Merino project | Request read access, or viewer on the project; say meanwhile whether the question is about payload shape, which stage can answer |
-| Zyte extraction key missing | Create one at https://app.zyte.com/o/612928/zyte-api/api-access, `export ZYTE_API_KEY=<key>` in the shell they launch from, and restart the session. Or have them run the single extraction and paste back the JSON, not the key |
+| Zyte extraction key missing | Create one at https://app.zyte.com/o/612928/zyte-api/api-access, then `export ZYTE_API_KEY=<key>`. Or have them run the single extraction and paste back the JSON, not the key |
 | Zyte Stats key missing | Issue a **dashboard** API key from the Zyte organisation settings page and export it; the extraction key will not authenticate against the Stats API |
-| No `mcp__sentry__` tools at all | Run `! claude mcp add --scope user --transport http sentry https://mcp.sentry.dev/mcp`, then `/mcp` to authenticate; the tools appear after a session restart |
+| No `mcp__sentry__` tools at all | `claude mcp add --scope user --transport http sentry https://mcp.sentry.dev/mcp`, then `/mcp` in the restarted session to authenticate |
 | Sentry connected but unauthenticated or scoped too narrowly | Run `/mcp` and authenticate for the `mozilla` org, or read back the issue's event counts broken down by error message |
-| No `mcp__slack__` tools | Run `/plugin install slack@claude-plugins-official`, then `/mcp` to authenticate; or post the drafted message to `#hnt-dev-be-alerts` themselves |
+| No `mcp__slack__` tools | `/plugin install slack@claude-plugins-official` typed into Claude Code, then `/mcp` to authenticate. The server needs a fixed OAuth callback port, so it can clash with another session authenticating at the same moment. Or have them post the drafted message to `#hnt-dev-be-alerts` themselves |
 | Editor-facing symptom needs an authenticated session | Reproduce the click themselves and report the exact error text and time |
 | The answer is in a dashboard you cannot reach | Open it, apply the specific filter you name, and read back the one number or shape you asked for |
 
