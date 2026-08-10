@@ -375,8 +375,8 @@ this file.
 
 ### Zyte
 
-Two separate APIs, both **metered — every call costs money**. Save all responses; never bulk-crawl to
-satisfy curiosity. Check for a key with `[ -n "$ZYTE_API_KEY" ] && echo present`. Reference keys by
+Two separate APIs. The extraction API is **metered — every call costs money**, so save all responses and
+never bulk-crawl to satisfy curiosity. Check for a key with `[ -n "$ZYTE_API_KEY" ] && echo present`. Reference keys by
 variable name in anything you save, so no value lands in a query file or the transcript.
 
 **Extraction API** (`ZYTE_API_KEY`, created at https://app.zyte.com/o/612928/zyte-api/api-access)
@@ -391,8 +391,17 @@ unapproved domains into the corpus.
 
 **Stats API** (`https://zyte-api-stats.zyte.com/api/stats`) is the vendor's own view of your traffic:
 per-domain response-code distribution over time. It takes a **different credential** — the Zyte
-dashboard API key from the organisation's settings page, explicitly not the Zyte API key above — as the
-HTTP basic username with an empty password, so the extraction key will be rejected here.
+dashboard API key from the organisation's settings page, explicitly not the Zyte API key above, held
+here as `ZYTE_SECRET_KEY`.
+
+Authentication is HTTP basic with that key as the **username and no password**, which is fiddlier than
+it sounds and is the usual reason a request that looks right fails. With curl, `-u "$ZYTE_SECRET_KEY:"`
+— **the trailing colon is required**, because without it curl reads the whole string as a username and
+stalls waiting for a password. Constructing the header by hand works too, as
+`Authorization: Basic <base64 of "<key>:">`, with the colon inside the encoded string. Read the status
+code before anything else: `401` means no usable credential reached the server, and `403` means a valid
+Zyte credential that is not the dashboard key, which in practice means the extraction key was used.
+
 `organization_id` is **required** and is `612928`. Only `groupby_time` (`hour|day|month|year`) and
 `groupby_domain` group; `response_codes`, `domains`, `extraction_type` and `extraction_from` are
 *filters*, not groupings, and `include_domain_health=true` is rejected without `groupby_domain=true`.
