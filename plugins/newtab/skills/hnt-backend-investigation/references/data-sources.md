@@ -279,8 +279,8 @@ Traps that will silently give you a wrong answer:
 ### Curated corpus MySQL
 
 Production database behind curated-corpus-api, reached through a preconfigured read-only login path.
-Check what exists with `mysql_config_editor print --all`, and expect to need VPN — a hang rather than
-an auth error is the usual symptom of being off it.
+Check what exists with `mysql_config_editor print --all`, and expect to need the AWS Client VPN — a hang
+rather than an auth error is the usual symptom of being off it.
 
 **Connect as a read-only user or not at all.** `pkt_curation_corpus` is the application's own account on
 the prod cluster and carries full write and schema privileges; decline it even for a `SELECT`, and
@@ -450,7 +450,8 @@ Roughly ordered by how often an investigation needs them, cheapest first.
 | No billing project configured | Confirm you can bill `mozdata-nonprod`, or name their personal sandbox, usually `moz-fx-dev-<ldap>-sandbox`; either can be set with `gcloud config set project <id>` |
 | No `mcp__sentry__` tools at all | `claude mcp add --scope user --transport http sentry https://mcp.sentry.dev/mcp`, then `/mcp` in the restarted session to authenticate |
 | Sentry connected but unauthenticated or scoped too narrowly | `/mcp`, and authenticate for the `mozilla` org |
-| Corpus MySQL hangs rather than erroring | Connect to Mozilla VPN, then say so; if it still hangs the login path itself is stale |
+| Corpus MySQL hangs rather than erroring, and they have the VPN client | Connect to the AWS Client VPN, then say so; if it still hangs, the login path itself is stale |
+| Corpus MySQL hangs and there is no VPN client installed | Install the AWS VPN Client from https://aws.amazon.com/vpn/client-vpn-download/, then download the client configuration from the endpoint page — https://us-east-1.console.aws.amazon.com/vpcconsole/home?region=us-east-1#ClientVPNEndpointDetails:clientVpnEndpointId=cvpn-endpoint-0d3c4e4a0121a5763 — load that profile into the client, connect, and say so |
 | AWS SSO session expired | `aws --profile <profile> sso login` |
 | The answer is in a dashboard you cannot reach | Open it, apply the specific filter you name, and read back the one number or shape you asked for. Asking for *access* to a dashboard is usually the slower path; asking a precise question about what it shows is faster for both of you |
 | No AWS profile at all | `aws configure sso` for a read-only role, or have them name a profile already in their `~/.aws/config` |

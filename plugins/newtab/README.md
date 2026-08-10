@@ -21,7 +21,7 @@ Use this skill when a Sentry alert fires, an editor reports something broken, or
 - `gh`
 - `gcloud` and `bq`
 - the `aws` CLI, with a read-only SSO profile
-- a MySQL client, plus Mozilla VPN
+- a MySQL client, plus the AWS Client VPN
 - `uv` or `python3`
 - the Sentry MCP server
 - the Slack MCP server, for `#hnt-dev-be-alerts`
