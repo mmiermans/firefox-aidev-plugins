@@ -162,10 +162,10 @@ through SQS, and the stage is called several things across these repos, so pin d
 refers to.
 
 An **editorial section**, called a **Custom Section** in the tooling, is one the editorial team creates
-and maintains by hand rather than one assembly produced: `createSource` / `updateSource` of `MANUAL` in
-corpus MySQL, against `ML` for an assembled one. So an empty editorial section and an empty assembled
-section have disjoint causes, and establishing which kind you are looking at comes before anything
-else. Editors manage them at
+and maintains by hand, as against an **ML-managed** section that assembly produces and refreshes:
+`createSource` / `updateSource` of `MANUAL` in corpus MySQL, against `ML`. So an empty editorial section
+and an empty ML-managed section have disjoint causes, and establishing which kind you are looking at
+comes before anything else. Editors manage them at
 https://curation-admin-tools.readitlater.com/curated-corpus/custom-sections/, and one section is at
 `.../custom-sections/<externalId>/<surface>/` — a link worth handing to the developer when the question
 is what a section was meant to contain, since reaching it needs an editor session.
