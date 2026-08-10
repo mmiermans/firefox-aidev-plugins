@@ -95,6 +95,24 @@ FINDINGS.md is about the same symptom.
   the directory belongs to another investigation.
 - Python work goes in an isolated venv inside this directory.
 
+## Keep a timeline throughout
+
+Maintain a `timestamp (UTC) | observation | source` table as you go rather than assembling one at the
+end. Where the onset is cheap to establish, get it early: it constrains every other line of enquiry.
+Where it is not, leave it open and say so. An assumed onset is worse than an unknown one, because
+everything downstream quietly inherits it.
+
+Normalise and label every timestamp, since a subtraction error can manufacture an outage that never
+happened. Extend the window to weeks rather than hours; these failures are frequently older than the
+report. Distinguish first occurrence from first noticed, line the window up against the deploys and
+config changes you turned up, and remember that a source with a retention window cannot establish
+onset — its earliest record may simply be its oldest.
+
+**The scheduling layer is not in UTC.** Scheduled dates and the assembly crons run in each surface's
+own timezone, so a UTC comparison invents a one-day gap for part of every day on any surface offset
+from UTC — worst for the Americas, and `en-US` is the largest surface. Convert per surface, and say
+which timezone you used.
+
 ## Step 1 — pin down the report
 
 Before your first probe, read [references/data-sources.md](references/data-sources.md). It carries the
@@ -169,20 +187,7 @@ answer: ask what else could produce what you measured before committing to it. A
 yielding, measure the same thing in another plane — the failure is often invisible in the one you
 started in.
 
-## Step 4 — build the timeline
-
-An explicit `timestamp (UTC) | observation | source` table. Normalise and label every timestamp, since
-a subtraction error can manufacture an outage that never happened. Extend the window to weeks rather
-than hours; these failures are frequently older than the report. Distinguish first occurrence from
-first noticed, line the window up against the deploys the prior turned up, and remember that a source
-with a retention window cannot establish onset — its earliest record may simply be its oldest.
-
-**The scheduling layer is not in UTC.** Scheduled dates and the assembly crons run in each surface's
-own timezone, so a UTC comparison invents a one-day gap for part of every day on any surface offset
-from UTC — worst for the Americas, and `en-US` is the largest surface. Convert per surface, and say
-which timezone you used.
-
-## Step 5 — stratify before concluding anything
+## Step 4 — stratify before concluding anything
 
 An aggregate that looks fine is the normal way these problems hide. Slice by the dimensions the feature
 actually has — for recommendations **domain, locale, region, surface, section, experiment branch, and
@@ -198,7 +203,7 @@ If the measurements exonerate the backend, stop at the service boundary: name th
 contract being broken, and hand it over. A second, unrelated anomaly you trip over on the way is a
 one-line note plus a task, not a second investigation.
 
-## Step 6 — try to break your own conclusion
+## Step 5 — try to break your own conclusion
 
 Before writing anything down as fact, check the boring explanations: a filter in your own query, a
 silent truncation, an unrepresentative code path, a column that does not mean what its name says, a
@@ -214,7 +219,7 @@ FINDINGS.md, note it to the developer in one line, and keep going.
 Mark every claim **verified**, **inferred**, or **refuted**. Keep the refuted ones in the document;
 they stop the next person re-running them.
 
-## Step 7 — write FINDINGS.md
+## Step 6 — write FINDINGS.md
 
 ```markdown
 # <feature>: <symptom> — investigation
@@ -255,7 +260,7 @@ The change as a diff, at file-and-line where you can get there.
 Any telemetry plane you could not reach, and the access that would unblock it.
 ```
 
-## Step 8 — close the loop
+## Step 7 — close the loop
 
 - **Report what you could not reach.** Missing dashboard, IAM, token, or VPN access is a finding, not
   an inconvenience to route around. Leave any unresolved access task on the list rather than clearing
