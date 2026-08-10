@@ -7,6 +7,25 @@ Access varies by developer. Verify a source is reachable before building a plan 
 is not, follow "Don't stall on the developer" in SKILL.md — raise it once as a task and keep
 investigating, rather than stopping or silently substituting a weaker source.
 
+**Keep bulk out of your context.** Several of these sources answer a small question with a very large
+payload, and a context spent on raw JSON is a context not spent on the investigation. Where the bulk
+arrives through a CLI or `curl`, redirect it to a file in the investigation directory and read back only
+the slice you need; a `bq query` or `gcloud logging read` written to disk costs you nothing. Where it
+arrives through an MCP tool there is nothing to redirect, so hand that retrieval to a general-purpose
+subagent and keep only what it reports back. The ones that catch people out:
+
+- The **Experimenter API** returns every experiment, around 15 MB, and filtering after the fact still
+  leaves megabytes. Project to the slug and branch fields before it reaches you.
+- The **GCS ranking blobs** run to a few MB each. Freshness is a question about object metadata, so
+  list the object rather than reading it.
+- **`gcloud logging read` has no default limit.** Always pass `--limit` and a narrow `--format`.
+- A live **`curated-recommendations`** response is a couple of hundred KB for one surface. Save it, then
+  inspect fields.
+- **Sentry issue detail** carries full stacks, tags and contexts per event, and it is an MCP tool, so
+  delegate the decomposition rather than pulling events one at a time.
+- Even repo files bite: `merino/configs/default.toml` is ~57 KB and `merino/web/api_v1.py` ~32 KB, both
+  named below as things to consult. Grep them for the block you want.
+
 If you are editing this file later: it holds non-derivable access facts and traps that silently
 produce wrong answers. Worked incidents, current issue ids, canned queries, and symptom-to-cause
 lookups belong nowhere in this skill.
@@ -333,7 +352,9 @@ serving gap.
 Step 5 makes experiment branch one of the first cuts, and the branch names are not in any of the
 tables above. The Experimenter API lists live and recent experiments without authentication:
 `https://experimenter.services.mozilla.com/api/v6/experiments/`. Use it to get the real slug and branch
-names before slicing telemetry, rather than inventing them or asking.
+names before slicing telemetry, rather than inventing them or asking. It returns every experiment, so
+write it to a file and project out the slugs and branches there; see the context note at the top of
+this file.
 
 ### Zyte
 
