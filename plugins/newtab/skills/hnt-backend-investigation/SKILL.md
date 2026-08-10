@@ -210,10 +210,12 @@ silent truncation, an unrepresentative code path, a column that does not mean wh
 partially-launched feature. Then verify the outcome and not just the mechanism: a guard that provably
 runs is not evidence that its effect is correct.
 
-**Corroborate. Where a second source can speak to the same question, go and read it too.** One source
-agreeing with you is a hypothesis; two that could have failed differently agreeing is a finding. The
-second reading is where a wrong inference usually surfaces, so make it even when the first answer looked
-clear, and say in FINDINGS.md which sources a claim rests on.
+**Corroborate as widely as is reasonable.** Every source that can speak to the question is worth
+reading, not merely a second one: one source agreeing with you is a hypothesis, and each further source
+that could have failed differently and did not makes the claim harder to overturn. Do this even when the
+first answer looked clear, because that is where a wrong inference survives. Stop when what is left
+would only re-read the same plane, and record in FINDINGS.md which sources each claim rests on, so one
+standing on a single source is visible as such.
 
 Re-read the prior. If your conclusion implies that something the prior says is working is broken,
 re-check your own measurement first; a stratum mismatch or a wrong surface identifier is the likelier
