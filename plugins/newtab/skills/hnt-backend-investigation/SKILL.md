@@ -55,17 +55,12 @@ when proceeding on any assumption would waste the whole investigation.
 When a source you cannot reach looks promising, raise it **once** as a pending task carrying the
 whole errand in its own text, prefixed `User action:` so it reads as theirs rather than yours — e.g.
 `User action: connect to VPN so corpus MySQL is reachable — settles whether the DE items exist at
-all`.
-Give the exact command, not a description of the problem; for an interactive login use the `!`
-in-session form so the output lands here, e.g.
-`! aws --profile <profile-you-found-in-~/.aws/config> sso login`. If the answer lives in a dashboard
-or console you have no credential for, do not ask for access at all — name the view, the filter, and
-the single number or shape you need, and ask them to read it back.
+all`. Give the exact command, not a description of the problem; the "Access requests" section of
+`references/data-sources.md` has the command for each gated source and how to word the ask. If the
+answer lives in a dashboard or console you have no credential for, do not ask for access at all —
+name the view, the filter, and the single number or shape you need, and ask them to read it back.
 
 **Then keep investigating the other hypotheses immediately. Do not wait.**
-
-One standing exception to raising a source only when it looks promising: missing Sentry tools, which
-you flag on sight in step 1.
 
 Restate it exactly once more — whichever comes first: the unblocked lines run out, or you are three
 probes into a line you had already judged weaker than the blocked one. That is the second and last
@@ -146,11 +141,8 @@ worse than the alert says. When the report is a Sentry alert, resolve it to a co
 volume, and decompose the issue by error message before trusting its title or its trend — the
 alert-quality checks are in `references/failure-modes.md`.
 
-**If the `mcp__sentry__` tools are not available, say so before going any further.** Sentry is the
-primary evidence plane for anything error-shaped in this stack, and steps 1, 2 and 6 all read from
-it, so its absence is not a detail to work around quietly. Raise the setup errand on sight rather
-than weighing it against your other lines; `references/data-sources.md` carries the command. Then
-carry on with the planes you do have.
+Sentry is the plane most of this reads from, so if the `mcp__sentry__` tools are absent, say so and
+raise it like any other blocked source, then carry on with the planes you do have.
 
 **If you cannot reproduce it, that is a result, not a blocker.** Record the exact attempt — surface,
 locale, time, request, what you saw instead — then switch the question to why the reporter saw it
