@@ -79,17 +79,19 @@ that was never made.
 Each investigation gets its own subdirectory inside one root directory that the developer keeps their
 investigations in. Do not assume where that root is. Establish it in this order:
 
-1. **Look in user memory.** `~/.claude/CLAUDE.md` is where the root is recorded, because it is the
-   only memory scope that applies across every repository you might be launched from. If it names a
-   root, use it and do not ask.
+1. **Check the instructions you were already given.** A root recorded on an earlier run is already in
+   front of you: user-scope instructions load automatically at the start of every session. If they
+   name a root, use it and do not ask.
 2. **Otherwise ask, once, before your first write.** Where the developer keeps investigations cannot
    be derived, and guessing puts files somewhere they did not choose. Ask it as a single question at
    the start, and start pinning down the report while you wait rather than idling.
-3. **Then record it.** Append one line to `~/.claude/CLAUDE.md`, creating that file if it does not
-   exist: `Investigations live in <path> (one subdirectory per investigation).` Tell the developer
-   you saved it, so they know they will not be asked again. Auto memory is the wrong home for this:
-   it is keyed to the repository you were launched from, and investigations get started from
-   whichever service repo is to hand.
+3. **Then record it**, so the question is asked once per machine rather than once per investigation.
+   Add one line to `~/.claude/CLAUDE.md`, creating that file if it does not exist:
+   `Investigations live in <path> (one subdirectory per investigation).` That is the user scope, the
+   one that applies whichever repository you are launched from, and it will be loaded for you from the
+   next session onward. Say that you saved it. Do not put this in auto memory, which is keyed to the
+   repository you were launched from, while investigations get started from whichever service repo is
+   to hand.
 
 Then create this investigation's subdirectory inside that root. If the root already holds
 investigations, follow the naming they use; otherwise `<mon><DD>-<slug>`, e.g.
