@@ -171,10 +171,9 @@ your own inference. Build that prior yourself before asking for it — most of i
   model or config artifacts.
 - **Whether this is normally noisy or seasonal** — a trailing profile of the same metric, by day of
   week. Do not ask; compute it.
-- **Whether it has happened before** — search Sentry for the same signature, recent alerts in
-  `#hnt-dev-be-alerts`, and the service repos' GitHub issues. Where one of those is unreachable, record
-  it as unchecked rather than empty; "nothing similar has fired" is a claim about a channel you actually
-  read.
+- **Whether it has happened before** — search Sentry for the same signature and the service repos'
+  GitHub issues. Where one of those is unreachable, record it as unchecked rather than empty; "nothing
+  similar has fired" is a claim about a source you actually read.
 
 What is left is genuinely in the developer's head: anything in flight that a repo or a dashboard
 would not show, and whether a postmortem or incident register already covers this area. Raise that
@@ -328,10 +327,9 @@ Any telemetry plane you could not reach, and the access that would unblock it.
 
 ### Posting to `#hnt-dev-be-alerts`
 
-Updates worth sharing go to `#hnt-dev-be-alerts`. Search the channel first: if the investigation
-started from an alert or message posted there in the last day or two, reply **in that thread**, so the
-diagnosis stays attached to the alert people already saw. Only start a new thread when nothing recent
-relates.
+Updates worth sharing go to `#hnt-dev-be-alerts`. If the investigation started from an alert or message
+posted there in the last day or two, find that one message and reply **in its thread**, so the
+diagnosis stays attached to the alert people already saw. Otherwise start a new thread.
 
 **Ask before every single message, showing the exact text and where it will go.** Approval for one
 post is not approval for the next, and this is a shared channel colleagues act on. If approval does
