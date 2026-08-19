@@ -15,12 +15,14 @@ description: >
 This skill drives the workflow *around* a conversion once the test itself is written. Test authoring
 is a separate skill (`efficiency-test-authoring`). The five steps:
 
-**convert → file bug → commit (with bug #) → track in Jira → submit for review**
+**convert → file bug (blocking meta 2030727) → annotate `@Converted` + commit (with bug #) → track in Jira
+→ submit for review**
 
 ## What runs where
 
 - **The agent (sandbox)** does the conversion, static checks, and drives the bridge; it creates Jira
-  items via the Atlassian connector. It **cannot** reach the repo, Bugzilla, or Phabricator directly.
+  items with `tools/jiratool.py` (preferred — it works headless), falling back to the Atlassian
+  connector only if that tool is unavailable. It **cannot** reach Bugzilla or Phabricator directly.
 - **The host bridge (`effwatch`)** runs the git + Bugzilla actions on the engineer's machine and returns
   results. It never pushes and never submits.
 - **The engineer** runs `effwatch`, keeps a device attached, and runs the final `moz-phab submit`.
@@ -42,6 +44,7 @@ the only values you need to change:
 | Value | Current | What it's for |
 |---|---|---|
 | Template bug | `2057054` | Cloned for product/component/version → Firefox for Android :: UI Tests |
+| Tracking meta bug | `2030727` | Every *conversion* bug must block it (`"blocks": [2030727]`) |
 | Reviewers | `isabel_rios`, `aaronmt` | Default Phabricator reviewers (`EFF_REVIEWERS`) |
 | Conversion parent | `MTE-5731` | Story that conversion sub-tasks hang off |
 | Enablement parent | `MTE-5715` (or `MTE-5688`) | Harness-hardening / tech-debt story |
@@ -67,25 +70,93 @@ Drop `conversion-runs/_queue/<id>.request.json`:
   "kind": "conversion",            // conversion | enablement | tooling — picks the description footer
   "testrail": "<id(s)>",
   "template_bug": "2057054",        // clones product/component/version → Firefox for Android :: UI Tests
+  "blocks": [2030727],              // REQUIRED for conversions — the tracking meta bug (see below)
   "type": "task" }
 ```
 `effbug` files the bug, then **rewords the title to `Bug NNNNN - <summary>`** so it matches the commit
 subject exactly, and **self-assigns** to the API-key owner. It returns the number in
 `_bug/<id>.bug-result.json`.
 
-### 3. Commit with the real bug number (agent → bridge → `effgit`)
-Write the commit message to `conversion-runs/<batch>/msg.txt` with `Bug NNNNN - [efficiency] … r=isabel_rios,aaronmt`
-then drop `{ "git":"commit", "message_file":"<batch>/msg.txt", "paths":[...] }`. (If a commit already exists
-with a placeholder, backfill by rewording — the loop files the bug *before* committing going forward, so no
-reword is needed.)
+**Check the TestRail ids before you file.** Comment 0 cannot be edited through the BMO API, so a wrong id is
+permanent unless you post a correction. Compare each id against the line immediately above the legacy method (not a
+grep context window — a neighbouring test's id looks identical in kind); three of six were wrong in one sitting this
+way, and two filed bugs needed correcting comments. If you do need to correct one after filing:
+```json
+{ "bug": "update", "ids": [2064815], "comment": "Correction to comment 0: …" }
+```
 
-### 4. Track in Jira (agent → Atlassian connector)
+**Hang the bug off the tracking meta bug — `"blocks": [2030727]`.**
+[Bug 2030727](https://bugzilla.mozilla.org/show_bug.cgi?id=2030727) is `[meta] TAE - Migrate and remove
+legacy tests`; it tracks the campaign via its `depends_on` list, so each conversion bug must *block* it.
+Pass `blocks` at create time — that is one field, versus a second round-trip afterwards, and a conversion
+that never gets linked is invisible to whoever reads the meta bug for campaign status.
+
+Scope: **test-conversion bugs go on the meta; tooling/docs/harness bugs do not.** The meta is specifically
+about migrating and removing legacy tests, which is why e.g. the effview-tool and harness-docs bugs are
+deliberately absent from it. If a conversion also needed harness work, the conversion bug still blocks the
+meta — the enablement is tracked in Jira (step 4), not by a second meta entry.
+
+To backfill one you already filed:
+```json
+{ "bug": "update", "ids": [NNNNN], "blocks": [2030727] }
+```
+
+To close one as a duplicate — which happens when the same test gets converted twice, see step 1 —
+`{ "bug": "update", "ids": [NNNNN], "dupe_of": MMMMM, "self_assign": false }`. `effbug` fills in
+RESOLVED/DUPLICATE for you; passing `resolution` alone is rejected, because Bugzilla will not take
+DUPLICATE without `dupe_of`. Note there is **no** API for editing a bug's description: a wrong comment 0
+can only be fixed by a human in the web UI, so get the mechanism right before you file.
+`update` wraps relation lists as `{"add": [...]}` so this appends. Never PUT a bare list to a meta bug's
+`depends_on` — Bugzilla treats that as *replace* and it would drop every other bug the meta tracks.
+
+### 3. Commit with the real bug number (agent → bridge → `effgit`)
+
+**First annotate the legacy method(s) you just replaced — this goes in the SAME commit as the conversion,
+and it is the step most often forgotten:**
+```kotlin
+@Converted(
+    replacedBy = ["org.mozilla.fenix.ui.efficiency.tests.<Class>#<method>"],
+    bug = NNNNN,          // the bug you filed in step 2
+    since = "YYYY-MM",
+    notes = "Legacy also asserted X; not carried over because …",   // only if coverage was dropped
+)
+```
+The gate is **green locally** (step 1's `effverify` verdict), *not* landed — you cannot annotate after
+landing without a second bug and a second review, and every conversion in this campaign has landed the
+annotation alongside its replacement. `replacedBy` is required, one entry per replacement, and each must
+resolve to a real non-`@Ignore`d `@Test`. Put the parity gaps from step 1 in `notes` — that is the
+auditable record of what did not carry over. Annotate the legacy method in place; do **not** delete it, it
+keeps running alongside the replacement.
+
+Then write the commit message to `conversion-runs/<batch>/msg.txt` with
+`Bug NNNNN - [efficiency] … r=isabel_rios,aaronmt` and drop
+`{ "git":"commit", "message_file":"<batch>/msg.txt", "paths":[...] }` — the `paths` list must include the
+legacy test file you just annotated as well as the new/changed efficiency files. (If a commit already
+exists with a placeholder, backfill by rewording — the loop files the bug *before* committing going
+forward, so no reword is needed. `effgit`'s `amend` does **not** stage: send `stage` first, then `amend`.)
+
+### 4. Track in Jira (agent → `jiratool.py`)
 Separate strict conversion from the enablement it sometimes forces, so conversion effort can be measured:
 - **Conversion** → a **Sub-task labelled `conversion`** under the Smoke-conversion campaign story **MTE-5731**.
 - **Tooling/enablement** discovered during conversion → a **separate Sub-task labelled `enablement`** under
   Harness Hardening **MTE-5715** (or Tech-Debt **MTE-5688**), **linked** ("Relates") to the conversion sub-task.
-- Create with `issueTypeName: "Sub-task"`, `additional_fields: {"labels":[...]}`, and self-assign via
-  `assignee_account_id`. Put the bug number + Phab revision in the item. cloudId = `mozilla-hub.atlassian.net`.
+- Put the bug number, branch/commit and Phab revision in the item.
+
+Use `tools/jiratool.py` (works headless; no Atlassian connector needed). Bodies come from a file, so write
+the description to a temp file first:
+```
+python3 jiratool.py create '<summary>' --file body.txt --parent MTE-5731 --issuetype Sub-task --label conversion
+python3 jiratool.py create '<summary>' --file body.txt --parent MTE-5715 --issuetype Sub-task --label enablement
+python3 jiratool.py link <enablement-key> Relates <conversion-key>
+python3 jiratool.py assign <key> --me        # create does NOT self-assign; do this explicitly
+```
+`create` defaults to `--issuetype Story` and no labels, so pass both every time or the item lands as an
+unlabelled Story in the wrong shape. `--label` is repeatable. If the Atlassian MCP connector happens to be
+connected it also works, but do not count on it — it is absent in headless/cron runs.
+
+An enablement sub-task is warranted whenever the conversion needed a *new* page object, selector twin, nav
+edge or `moz*`/`mozVerify*` primitive — i.e. build mode 3. Write up what the gap was and what the proper
+fix would be, not just the workaround you shipped.
 
 ### 5. Submit the finished stack (engineer)
 Submitting/landing stays with the engineer. **Mozilla's moz-phab has no `--dry-run`** — it's interactive: it
@@ -94,16 +165,35 @@ can't touch already-landed base commits:
 ```
 moz-phab submit --reviewer isabel_rios --reviewer aaronmt <first-new-commit>
 ```
-(or `python3 tae-conversion/tools/effsubmit.py --start <first-new-commit> --execute`). Then add the
+(or `python3 tae-conversion/tools/effsubmit.py --start <first-new-commit> --execute`).
+
+**A cherry-picked base whose revision is CLOSED blocks the whole submit.** Borrowing an unlanded commit as a base is
+fine for building and running, but moz-phab refuses the stack if any commit in range maps to a closed revision, and
+unpicking it late means reworking whatever depended on it. So before cherry-picking, diff what you actually need
+against `main`: on 2026-08-19 everything needed was already landed except a one-line helper written in the same
+session, so the borrowed commit was dropped and the helper inlined. And never create a file that the unlanded commit
+also creates — that is an add/add conflict on every rebase until it lands. Then add the
 `testing-exception-unchanged` tag in the Phabricator web UI (no moz-phab CLI flag exists for it). moz-phab
 keys off `Differential Revision:` trailers, so base commits that carry them are excluded automatically — even
 if they landed on autoland and aren't in your local central yet.
 
+## If you rebase a stack that is already submitted
+Dropping a commit does not remove its revision from the stack graph. Abandoning the revision leaves the
+next one still recording it as a parent, with a diff based on the commit you dropped, so the stack renders
+with an abandoned revision wedged in the middle. Resubmitting the **whole** range is what re-parents it —
+submitting only the commits whose content changed leaves the stale edge in place.
+
+Two consequences to warn the engineer about before they push: every revision gets a fresh diff, because a
+rebase changes every hash, and revisions that were already accepted reset to needs-review. If avoiding
+that churn matters more than a wording fix, leave the commit messages alone — amending one forces the
+upload you were trying to avoid.
+
 ## After landing
-Re-sync the tracker so conversion counts + `@Converted` annotations catch up (see
-`tae-conversion/README.md` → "Reconciling the ledger" and `tae-conversion/tools/reconcile_conversion.py`),
-and annotate the converted legacy methods with `@Converted(replacedBy = [...], bug = NNNNN, since = "YYYY-MM")`
-once green + landed. Record any coverage that didn't carry over in the annotation's `notes` parameter.
+Re-sync the tracker so conversion counts catch up with the `@Converted` markers that landed in step 3 (see
+`tae-conversion/README.md` → "Reconciling the ledger" and `tae-conversion/tools/reconcile_conversion.py`).
+
+If reconcile reports a converted test with no `@Converted` marker, the annotation was missed in step 3 —
+that is a gap to backfill under a follow-up bug, not the normal path. Annotating is step 3's job.
 
 ## Conventions
 - **Faithful-port-first:** don't rewrite behavior during conversion; log quality ideas separately.
