@@ -126,11 +126,12 @@ developer takes minutes to act, and those minutes should overlap your work, not 
 for access you end up not needing costs one line. Finding the gap an hour in costs the hour. Further
 asks can follow as new lines open up.
 
-Establish these five facts from the data.
+Establish these facts from the data.
 
 | Fact | Why it matters |
 |---|---|
 | Exact symptom, verbatim, and which feature | "Empty section" and "wrong items in section" have disjoint causes |
+| For a reported metric: its exact definition and source (table, dashboard, filters) | Reproduce the reporter's number before explaining it; a near-miss definition can trend differently |
 | Who noticed, and how | Alert / editor report / spotted by hand — sets what evidence exists |
 | First and last seen, **with timezone** | Anchors the timeline; reports usually arrive late |
 | The stratum — surface, locale, section, client version, or for a daily artifact the date | The stratum is very often the diagnosis |
@@ -168,7 +169,8 @@ inference. Derive the prior rather than asking for it:
 - **What shipped recently** — commits in the service repos, releases in Sentry, timestamps on model or
   config artifacts.
 - **Whether this is normally noisy or seasonal** — a trailing profile of the same metric, by day of
-  week. Do not ask; compute it.
+  week. Do not ask; compute it. For a year-over-year claim, plot the baseline year across the whole
+  window first: a step in the baseline year reads as a change in the current one.
 - **Whether it has happened before** — Sentry for the same signature, and the service repos' GitHub
   issues. Where one is unreachable, record it as unchecked rather than empty.
 
@@ -213,6 +215,8 @@ client/addon version**, for a once-a-day global artifact barely more than the da
 single stratum at zero or down sharply against its own trailing median.
 When the report says "some users" with no stratum attached, try experiment branch, region and rollout
 state first: some markets receive stories only through Nimbus enrolment, which a locale slice cannot see.
+"Country" is several different fields across the telemetry tables (geo-IP, `Region.home`, a clamped
+allowlist; see the telemetry traps in data-sources.md), so name which one a region slice uses.
 
 **Liveness is not health.** "The job ran successfully" is compatible with total data loss in every one
 of these pipelines. Count what came out and compare it against what went in.
@@ -227,6 +231,13 @@ Before writing anything down as fact, check the boring explanations: a filter in
 silent truncation, an unrepresentative code path, a column that does not mean what its name says, a
 partially-launched feature. Then verify the outcome and not just the mechanism: a guard that provably
 runs is not evidence that its effect is correct.
+
+Check every comparison group for selection before it counts as evidence:
+- **Leftover groups.** Users left on an older client or an unexpected surface differ in whatever left them there.
+- **Matched sets.** "Same items on both surfaces" is conditioned on both rankers' choices, and its composition can shift under you.
+- **Moving controls.** A control stratum can itself have changed in the window.
+
+Report each stratum's absolute level alongside any ratio between strata.
 
 **Corroborate as widely as is reasonable.** Every source that can speak to the question is worth
 reading, not merely a second one: one source agreeing with you is a hypothesis, and each further source

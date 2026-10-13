@@ -151,7 +151,18 @@ interval and feeds them to the Thompson-sampling ranker (see `[default.curated_r
 in `apps/merino/merino/configs/default.toml`). If the producing Airflow DAG in `bigquery-etl` stops, Merino keeps
 serving with frozen ranking: it logs at INFO, raises nothing, and no row in any table below changes.
 Compare the blob's update time against the producing DAG's current `schedule_interval` rather than
-against a remembered cadence.
+against a remembered cadence. Each write is also kept as a dated object beside `latest.json`
+(`engagement/YYYYMMDDhhmm.json` roughly every 10 minutes, `priors/YYYYMMDDhhmm.json` daily, about three
+months retained), so list the prefix to get the history of either input.
+
+**Ranking is keyed on the request's region, not on the surface.** Two regions served the same surface
+get differently ranked feeds. In `compute_interactions` (`apps/merino/merino/curated_recommendations/rankers/ranker.py`),
+an item with a row for the request region is scored on a blend weighted `REGION_ENGAGEMENT_WEIGHT`
+toward that region, with that region's prior. An item without one falls back to global counts and the
+global prior. The engagement export keeps only the top ~25k rows by impressions across all regions (`LIMIT`
+in bigquery-etl `newtab_merino_extract_v3`), so a low-traffic region has regional rows for few of its
+items. The prior is β = 0.05 × the region's impressions per item and α = β × its top-2 CTR
+(`prior_backends/gcs_prior.py`), so a low-traffic region also gets a proportionally weaker prior.
 
 **Merino serves stale on upstream failure, per pod.** When the corpus fetch fails and a warm cache
 entry exists, it returns the stale entry *and* pushes the expiry out again, so the stale window has no
@@ -247,13 +258,30 @@ experiment branch or browser version:
 |---|---|
 | `moz-fx-data-shared-prod.telemetry_derived.newtab_visits_v1` | The experiment and browser-version stratum (`experiments`, `browser_version`, locale, country). Very large and `requirePartitionFilter` is on |
 | `moz-fx-data-shared-prod.firefox_desktop.newtab_content_live` | The live plane, minutes behind rather than a day — the only one that can confirm a symptom that is happening now |
-| `moz-fx-data-shared-prod.firefox_desktop_derived.newtab_content_items_daily_v1` | Daily item-level impressions and clicks. Carries no locale and no experiment branch, and its version column is null for most volume, so do not use it for those cuts |
+| `moz-fx-data-shared-prod.firefox_desktop_derived.newtab_content_items_daily_v1` | Daily item-level impressions and clicks by served surface, position and country. Carries no locale and no experiment branch. Holds two pings with different `country` meanings; see the traps below |
 
 The derived tables are T+1, so they cannot confirm a live symptom; reach for the live table when the
 question is "is this happening right now". Confirm each object still exists before drawing a conclusion
 from an empty result, and use `bq ls <dataset>` to settle whether something is a table or a view and
 whether it is partitioned — a view has no partition column, so ordering a partition filter on one is a
 query error.
+
+Telemetry traps that silently give a wrong answer:
+
+- **"Country" means different things in different places.**
+  - On the legacy `newtab` ping, `normalized_country_code` is the request's geo-IP.
+  - `Region.home` is what Firefox sends Merino, so it is what picks the surface and the ranking region. It is `metrics.string.region_home_region` in the `metrics` ping, joinable on `client_info.client_id`.
+  - On the private `newtab_content` ping, `normalized_country_code` is the OHTTP relay and means nothing. `metrics.string.newtab_content_country` is `Region.home` clamped to the surface's allowlist in `PRIVATE_PING_SURFACE_COUNTRY_MAP` (`browser/extensions/newtab/lib/TelemetryFeed.sys.mjs`): a region not on the list reports the list's first entry, and the field is unset for surfaces without an entry.
+
+  Users on a surface their geo country would not predict are disproportionately ones whose home region differs, so check `region_home_region` before reading them as a natural experiment.
+- **`newtab_content_items_daily_v1` unions two pings.**
+  - Rows with `app_version` NULL come from the private `newtab_content` ping. Their `country` is the clamped `Region.home`, or derived from the surface id where unset.
+  - Rows with `app_version` set come from the legacy `newtab` ping of older clients. Their `country` is geo.
+
+  Filter on `app_version IS NULL` for the private plane, and do not mix the two country definitions in one cut.
+- **`newtab_items_daily_v1` (legacy `newtab` ping) has mostly lost its item ids.** The share of impressions with NULL `corpus_item_id` rose from ~2% in mid-2025 to 91–96% through 2026, as item events moved to the private ping. An item-level cut on it silently covers a sliver of traffic. Its `scheduled_surface_id` is computed from country and locale (`mozfun.newtab.scheduled_surface_id_v1`), not the surface Merino served; the served one is `metrics.string.newtab_content_surface_id`.
+- **`position` counts sponsored tiles, and where they sit varies.** Whether a region gets sponsored tiles at all is the client pref `browser.newtabpage.activity-stream.discoverystream.region-spocs-config`. Which positions they take is set by the layout, and has changed over time. So an organic "top N" covers different slots in different strata. Compare impressions per position, organic and sponsored, across the strata before comparing top-N CTR.
+- **The raw private ping cannot be pruned below whole days.** `firefox_desktop.newtab_content` is clustered on `normalized_channel, sample_id`, but `sample_id` is NULL on every row, and surface and country live inside `metrics`. Its events run to ~120–160 GB per day. Use the daily tables where they answer the question; otherwise aggregate in one pass over the shortest window and save the extract. On the legacy `newtab` ping, `sample_id` is populated, so filtering a `sample_id` range plus `normalized_channel` does cut the scan.
 
 These are the tables that come up most, not everything that is modelled. When they cannot answer the
 question, `bigquery-etl` is the index of what else exists: each derived table has a directory at
@@ -318,6 +346,7 @@ that is the telemetry tables above. Data starts at 2024-09-19.
 | `moz-fx-data-shared-prod.snowflake_migration_derived.corpus_items_current_v1` | One row per corpus item, deduped — but it keeps the latest row even when that row is a removal, so filter status yourself |
 | `moz-fx-data-shared-prod.snowflake_migration_derived.scheduled_corpus_items` | Legacy scheduled items; one row per item in practice. No market has served scheduled items since 2026-09 — every one moved to sections — so new rows are not expected and their absence is not a fault |
 | `moz-fx-data-shared-prod.snowflake_migration_derived.stg_reviewed_corpus_items_v1` | One row per reviewed-item event (approve, update, remove, reject), the closest thing to the raw stream you can read |
+| `moz-fx-data-shared-prod.snowflake_migration_derived.corpus_items_updated_v1` | Every version of each approved item, with `title`, `excerpt`, `publisher`, `url` and `topic`. The latest row per `approved_corpus_item_external_id` is what an item is about. `predicted_topic` is NULL on nearly every row; use `topic` |
 
 If one of these tables looks stale, check the DAG run first, then whether the emitting service is
 still sending events, before concluding that nothing changed. `snowplow_events_20230627_to_20240918` in
