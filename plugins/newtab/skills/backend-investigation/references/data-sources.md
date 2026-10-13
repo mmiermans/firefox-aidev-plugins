@@ -56,7 +56,7 @@ Every path in this file is relative to a service repo, and the repos are listed 
 recommendations below. Check for a clone at the obvious spot only, `ls -d ~/<repo-name>`, and read
 anything missing through `gh api` or `gh search code`, which needs no clone: for one or two files that
 is faster than cloning anyway. Do not go scanning the filesystem for a checkout. If repeated source
-reading is genuinely slowing the investigation, that is the point to raise a `User action:` task
+reading is genuinely slowing the investigation, that is the point to add a `USER-ACTIONS.md` item
 asking where the repo lives or for a fresh clone.
 
 ## Sentry
@@ -490,23 +490,35 @@ one message is what the `mcp__slack__` tools are for here; the rule is under "Po
 Raise these as soon as you can tell you will need them, usually at the start of the investigation, then keep working. Give the command, not a
 description of the problem.
 
-**How to ask.** End each message with the open asks under a **User action needed** heading, so they
-are the last thing on screen rather than buried in progress notes, and repeat them until each is
-done. Send one `PushNotification` per batch, not per item, leading with the action, e.g.
+**How to ask.** An ask in the conversation scrolls away under the investigation's output, so put it
+somewhere that stays on screen. Write the asks with the Write or Edit tool, not the shell, to
+`USER-ACTIONS.md` in the investigation directory, one `- [ ] <instruction>` line per step with the
+whole instruction on that one line, however long:
+
+```
+- [ ] In a new terminal, run `gcloud auth login` so BigQuery is reachable
+```
+
+This plugin shows the open lines in a **User action needed** pane with a Done button for each, and the
+Write or Edit result confirms where they are shown. When the developer presses Done you are told in
+the conversation. Verify the access before relying on it (`gcloud auth list`, a `--dry_run`), and mark
+an item `- [x]` yourself when you have confirmed it works. If the write result does not confirm the
+pane, because this client does not draw it, end each message with the open asks under a **User
+action needed** heading instead, so they are the last thing on screen.
+
+Also send one `PushNotification` per batch, not per item, leading with the action, e.g.
 `investigation blocked: run gcloud auth login so BigQuery is reachable`. It is a deferred tool, so
-load it with ToolSearch first. It skips itself when the developer is watching, so sending it costs
-nothing. Use one item per step, each prefixed `User action:` so it
-reads as theirs rather than yours, with the whole instruction in the item text. The commands below run
+load it with ToolSearch first. It skips itself when the developer is watching, which the pane covers,
+and reaches them when they have walked away. The commands below run
 in the developer's own shell, so say **"in a new terminal"** rather than expecting them to run inside
 this session. Where the fix changes which tools Claude Code has — installing an MCP server, exporting
 a key into the environment — the change only takes effect on a fresh start, so make the **last** item:
 
 ```
-User action: restart Claude Code in this directory with `claude --continue`, which picks this
-session back up where it left off
+- [ ] Restart Claude Code in this directory with `claude --continue`, which picks this session back up where it left off
 ```
 
-Then carry on. Drop items from the block as they land, along with any whose line stopped mattering.
+Then carry on. Delete any line whose line of inquiry stopped mattering.
 
 Roughly ordered by how often an investigation needs them, and how quickly they are resolved.
 
