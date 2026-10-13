@@ -307,7 +307,9 @@ Any telemetry plane you could not reach, and the access that would unblock it.
 - **Link prior art** — older investigation, ticket, postmortem, or a related error already known.
 - **Leave the follow-up as a task**, owned by whoever will act: confirm the fix shipped and the metric
   actually recovered. State that you have done so rather than asking whether to.
-- Hand back a two-line verdict plus the FINDINGS.md path. Do not paste the document into chat.
+- Hand back a two-line verdict plus the FINDINGS.md path. Do not paste the document into chat. Follow
+  it with the skill improvements from Step 8, one line each, and say that you will ask next whether to
+  open a PR for them. They are for the developer only and never go into a Slack post.
 
 ### Posting to `#hnt-dev-be-alerts`
 
@@ -318,3 +320,42 @@ diagnosis stays attached to the alert people already saw. Otherwise start a new 
 **Ask before every single message, showing the exact text and where it will go.** Approval for one
 post is not approval for the next, and this is a shared channel colleagues act on. If approval does
 not come, keep the draft in FINDINGS.md and carry on; an unposted update is not a reason to stop.
+
+## Step 8 — improve this skill
+
+As you write the verdict, look back over the investigation for what this skill got wrong or left out,
+so the list can go out with the conclusions (Step 7). What counts:
+
+- **Wrong or stale information** in this skill or its references: a path, table, project, cadence or
+  command that turned out not to be true.
+- **An assumption you made that the skill should have warned against**, or a trap you fell into that
+  it does not list.
+- **Missing access**: a credential or tool you needed that "Access requests" does not cover, or an
+  unblock command there that did not work.
+- **A source that settled the question** and that the skill does not name.
+
+Keep only what would change the next investigation, not facts about this one incident. Each candidate
+needs evidence from this run: the command and its output, the commit, the page. Check that the
+current skill text still says the wrong thing, since the plugin may have been updated since it
+loaded. If nothing qualifies, say so in one line with the conclusions and skip the question.
+
+Once the conclusions are handed back, the time-sensitive part is over, so this is the place for a
+blocking question. Ask once with
+`AskUserQuestion`, `multiSelect: true`, one option per fix. The label is the fix in a few words. The
+description gives what was wrong, the evidence and the proposed change. A question holds at most four
+options, so with more fixes, split them across questions by kind and drop the weakest. If they select
+nothing, or answer that they want none, stop.
+
+For the selected fixes, open a **draft** PR against `mozilla/firefox-aidev-plugins` that edits
+`plugins/newtab/skills/backend-investigation/`:
+
+- Work in a fresh clone outside the investigation directory. Use `gh repo fork --clone` if they cannot
+  push to the repo.
+- Edit in place and match the surrounding voice and density. Correct a wrong line rather than adding a
+  caveat next to it.
+- Title it `newtab/backend-investigation: <summary>`. In the body, give each fix with its evidence.
+- The repository is public. Leave out user data, editor identities, internal links and anything from
+  the investigation directory that is not already in the skill.
+
+Hand back the PR link. Selecting the fixes is the approval to open the draft; anything beyond that,
+such as requesting reviewers or marking it ready, is theirs to do.
