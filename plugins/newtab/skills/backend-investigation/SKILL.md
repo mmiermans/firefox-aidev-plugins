@@ -39,7 +39,7 @@ Every pause costs wall-clock, because the developer may not be watching. Default
 pick the sensible option, say which one you picked, and keep going. Ask a blocking question only
 when proceeding on any assumption would waste the whole investigation.
 
-When a source you cannot reach looks promising, raise it **once** as a pending task carrying the
+Raise access needs up front (Step 1), and when a source you cannot reach turns promising later, raise it **once** as a **User action needed** block at the end of your message, plus one `PushNotification` (see "How to ask"), carrying the
 whole errand in its own text, prefixed `User action:` so it reads as theirs rather than yours — e.g.
 `User action: connect to VPN so corpus MySQL is reachable — settles whether the DE items exist at
 all`. Give the exact command, not a description of the problem; the "Access requests" section of
@@ -52,8 +52,8 @@ name the view, the filter, and the single number or shape you need, and ask them
 Restate it exactly once more — whichever comes first: the unblocked lines run out, or you are three
 probes into a line you had already judged weaker than the blocked one. That is the second and last
 ask, and it does not apply if they have already answered. If there is still no response, write up and
-close out with `Status: blocked`, name the one unblock under "Could not measure", and leave the access
-task pending.
+close out with `Status: blocked`, name the one unblock under "Could not measure", and keep it in the
+final **User action needed** block.
 
 Stopping outright is a last resort: only when the blocked source is the only thing that can settle
 the question **and** it cannot be reduced to a question they can answer for you — a dashboard,
@@ -105,7 +105,7 @@ everything downstream quietly inherits it.
 Normalise and label every timestamp, since a subtraction error can manufacture an outage that never
 happened, and line the window up against the deploys and config changes you turned up.
 
-**The scheduling layer is not in UTC.** Scheduled dates and the assembly crons run in each surface's
+**The scheduling layer is not in UTC.** The assembly crons run in each surface's
 own timezone, so a UTC comparison invents a one-day gap for part of every day on any surface offset
 from UTC — worst for the Americas, and `en-US` is the largest surface. Convert per surface, and say
 which timezone you used.
@@ -114,6 +114,16 @@ which timezone you used.
 
 Before your first probe, read [references/data-sources.md](references/data-sources.md). It carries the
 traps that silently return wrong answers, and several of them look like an outage.
+
+**Check access in your first few minutes, not when a probe fails.** As soon as you know the feature
+and the symptom, decide which planes the investigation will probably need: BigQuery for counts or
+history, Sentry for errors, corpus MySQL for editorial state, AWS for the lambdas. Test each one with
+a single cheap command: `gcloud auth list`, a `bq query --dry_run`, whether any `mcp__sentry__` tools
+exist, `aws sts get-caller-identity`. Raise every missing one together, in one batch, before you
+start probing. Don't hold an ask back because there is still something you can do without it. The
+developer takes minutes to act, and those minutes should overlap your work, not follow it. Asking
+for access you end up not needing costs one line. Finding the gap an hour in costs the hour. Further
+asks can follow as new lines open up.
 
 Establish these five facts from the data.
 
@@ -201,7 +211,7 @@ actually has — for recommendations **domain, locale, region, surface, section,
 client/addon version**, for a once-a-day global artifact barely more than the date — and look for a
 single stratum at zero or down sharply against its own trailing median.
 When the report says "some users" with no stratum attached, try experiment branch, region and rollout
-state first: some surfaces are reachable only through enrolment, which a locale slice cannot see.
+state first: some markets receive stories only through Nimbus enrolment, which a locale slice cannot see.
 
 **Liveness is not health.** "The job ran successfully" is compatible with total data loss in every one
 of these pipelines. Count what came out and compare it against what went in.
@@ -280,7 +290,7 @@ Any telemetry plane you could not reach, and the access that would unblock it.
 
 ## Step 7 — close the loop
 
-- **Leave unresolved access tasks on the list** rather than clearing them, and report what you could
+- **Keep unresolved access asks** in the final **User action needed** block and in FINDINGS.md under "Could not measure", rather than dropping them, and report what you could
   not reach as a finding rather than an inconvenience you routed around.
 - **Link prior art** — older investigation, ticket, postmortem, or a related error already known.
 - **Leave the follow-up as a task**, owned by whoever will act: confirm the fix shipped and the metric

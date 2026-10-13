@@ -16,14 +16,14 @@ subagent and keep only what it reports back. The ones that catch people out:
 
 - The **Experimenter API** returns every experiment, around 15 MB, and filtering after the fact still
   leaves megabytes. Project to the slug and branch fields before it reaches you.
-- The **GCS ranking blobs** run to a few MB each. Freshness is a question about object metadata, so
+- The **GCS engagement blob** runs to a few MB. Freshness is a question about object metadata, so
   list the object rather than reading it.
 - **`gcloud logging read` has no default limit.** Always pass `--limit` and a narrow `--format`.
 - A live **`curated-recommendations`** response is a couple of hundred KB for one surface. Save it, then
   inspect fields.
 - **Sentry issue detail** carries full stacks, tags and contexts per event, and it is an MCP tool, so
   delegate the decomposition rather than pulling events one at a time.
-- Even repo files bite: `merino/configs/default.toml` is ~57 KB and `merino/web/api_v1.py` ~32 KB, both
+- Even repo files bite: `apps/merino/merino/configs/default.toml` is ~60 KB and `apps/merino/merino/web/api_v1.py` ~34 KB, both
   named below as things to consult. Grep them for the block you want.
 
 If you are editing this file later: it holds non-derivable access facts and traps that silently
@@ -49,8 +49,8 @@ symptom in one before probing: content recommendations (`curated-recommendations
 Day (`rss/picture-of-the-day`), the daily crossword (`games/particle`). Those are the ones with
 notes here, not the extent of what the page carries; most of this file is recommendations because
 that feature has by far the most moving parts. For anything else, find its provider under
-`merino/providers/`, its config block in `merino/configs/default.toml`, and read
-`merino/web/api_v1.py` as the index of what Merino serves New Tab.
+`apps/merino/merino/providers/`, its config block in `apps/merino/merino/configs/default.toml`, and read
+`apps/merino/merino/web/api_v1.py` as the index of what Merino serves New Tab.
 
 Every path in this file is relative to a service repo, and the repos are listed under Content
 recommendations below. Check for a clone at the obvious spot only, `ls -d ~/<repo-name>`, and read
@@ -74,8 +74,7 @@ The HNT services are in the **`mozilla`** organisation, prefixed `hnt-`; issue s
 
 `hnt-crawl` · `hnt-metaflow` · `hnt-curated-corpus-api` · `hnt-admin-api` ·
 `hnt-curation-admin-tools` · `hnt-section-manager-lambda` · `hnt-corpus-scheduler-lambda` ·
-`hnt-prospect-api` · `hnt-prospect-translation-lambda` · `hnt-serverless-image-cache` ·
-`hnt-braze-content-proxy` · `hnt-feature-flags`
+`hnt-serverless-image-cache` · `hnt-braze-content-proxy` · `hnt-feature-flags`
 
 Merino is separate: project `merino-py`, also in `mozilla`, and it takes every feature Merino serves,
 so `hnt-` marks the corpus and crawl services rather than the whole page. Some older projects exist in
@@ -111,7 +110,7 @@ curl -s https://merino.services.mozilla.com/api/v1/curated-recommendations \
 Nothing requires curl. Pick whatever suits the moment, and reach for a short script when you need to
 vary a field across several requests or parse what comes back; either way send the body to a file.
 
-`CuratedRecommendationsRequest` in `merino/curated_recommendations/protocol.py` is the authority on
+`CuratedRecommendationsRequest` in `apps/merino/merino/curated_recommendations/protocol.py` is the authority on
 that body. An out-of-range UTC offset is quietly coerced to null rather than rejected, so a malformed
 one does not announce itself; the field is taken as either `utcOffset` or `utc_offset` and must be 0 to
 23. `count` governs the flat list only and defaults to 100; it does nothing to the sections feed. Set
@@ -133,14 +132,13 @@ prod, query the telemetry instead. Stage answers payload-shape questions only �
 data — and its host is internal-only, so a request from outside the network returns 404 rather than an
 auth error: `https://stage.merino.nonprod.webservices.mozgcp.net`.
 
-GCP projects, for log reads, metrics and GCS listings. Confirm these against the deployed values files
-in the deployment repo rather than the in-repo TOMLs, which lag:
+GCP projects, for log reads, metrics and GCS listings:
 
 | Environment | Project |
 |---|---|
-| Merino prod | `moz-fx-merino-prod-5de4`; some buckets in `moz-fx-merino-prod-1c2f` |
-| Merino stage | `moz-fx-merino-nonprod-db57` (deployed); `moz-fx-merino-nonprod-ee93` is legacy and still named in `stage.toml` |
-| Crawl and ML | `moz-fx-mozsoc-ml-prod`, with gen2 Cloud Functions `prod-crawl-handler`, `prod-page-crawler`, `prod-ingester`, `prod-parser` |
+| Merino prod | `moz-fx-merino-prod-5de4`, all buckets; `moz-fx-merino-prod-1c2f` is the retired GCPv1 project |
+| Merino stage | `moz-fx-merino-nonprod-db57`; `moz-fx-merino-nonprod-ee93` is the retired GCPv1 project |
+| Crawl and ML | `moz-fx-mozsoc-ml-prod`, with gen2 Cloud Functions `prod-crawl-handler`, `prod-page-crawler`, `prod-ingester`, `prod-parser`, `prod-parser-intl` |
 
 When the logging API returns nothing useful, the BigQuery log sink for the same project usually does.
 That sink table is far larger than anything in the BigQuery list below — check whether it has a
@@ -148,9 +146,9 @@ partition column and filter on it, aggregate inside the query rather than pullin
 `--dry_run` first.
 
 **Ranking inputs arrive as GCS blobs on a timer, and a stalled producer is invisible everywhere else.**
-Merino pulls `engagement/latest.json` and `priors/latest.json` from its exports bucket on a short
-interval and feeds them to the Thompson-sampling ranker (see `[default.curated_recommendations.gcs]`
-in `merino/configs/default.toml`). If the producing Airflow DAG in `bigquery-etl` stops, Merino keeps
+Merino pulls `newtab-merino-exports/engagement/latest.json` and `newtab-merino-exports/priors/latest.json` from its exports bucket on a short
+interval and feeds them to the Thompson-sampling ranker (see `[default.curated_recommendations.gcs.engagement]` and `.gcs.prior`
+in `apps/merino/merino/configs/default.toml`). If the producing Airflow DAG in `bigquery-etl` stops, Merino keeps
 serving with frozen ranking: it logs at INFO, raises nothing, and no row in any table below changes.
 Compare the blob's update time against the producing DAG's current `schedule_interval` rather than
 against a remembered cadence.
@@ -170,7 +168,7 @@ are no BigQuery or ETL tables for those, so do not go hunting for them.
 ### The recommendations pipeline, and which repo owns each stage
 
 **crawl / discovery → hydration (Zyte) → curated corpus → ML section assembly → SQS →
-corpus-scheduler / section-manager lambda → curated-corpus-api → client-api → Merino → Firefox New
+section-manager lambda → curated-corpus-api → client-api → Merino → Firefox New
 Tab.** Editors act on the corpus through curation-admin-tools → admin-api → curated-corpus-api.
 Telemetry lands in BigQuery.
 
@@ -183,9 +181,9 @@ environment, and the dev constant beside it is unused — so stage Merino reads 
 | Repo | GitHub | Role |
 |---|---|---|
 | `merino-py` | mozilla-services/merino-py | Serves every New Tab feature — recommendations, picture of the day, the crossword — plus Firefox Suggest |
-| `content-monorepo` | Pocket/content-monorepo | Curated corpus, recommendations, section manager, the SQS lambdas |
+| `content-monorepo` | Pocket/content-monorepo | Curated corpus, recommendations, section manager, the section-manager SQS lambda |
 | `content-ml-services` | mozilla/content-ml-services | Crawl, classification, section assembly (Metaflow, Cloud Functions) |
-| `hnt-content` | mozilla/hnt-content | A rewrite of crawl and extraction. **In development, not serving production as of Aug 2026** — the crawl that runs is the one in `content-ml-services`, so a mechanism read out of this repo describes nothing that is live |
+| `hnt-content` | mozilla/hnt-content | A rewrite of crawl and extraction. **In development, not serving production as of Oct 2026**; its prod dataset `moz-fx-hnt-prod.crawl` exists but is empty — the crawl that runs is the one in `content-ml-services`, so a mechanism read out of this repo describes nothing that is live |
 | `pocket-monorepo` | Pocket/pocket-monorepo | client-api federated router, shared infrastructure |
 | `curation-admin-tools` | Pocket/curation-admin-tools | Editor-facing web app |
 | `admin-api` | Pocket/admin-api | Federated GraphQL gateway for the admin tools |
@@ -211,11 +209,12 @@ https://curation-admin-tools.readitlater.com/curated-corpus/custom-sections/, an
 is what a section was meant to contain, since reaching it needs an editor session.
 
 Merino's request `locale` is hyphenated (`en-US`) and the surface is **derived** from language plus
-region by `get_recommendation_surface_id` in `merino/curated_recommendations/utils.py`, which also
-branches on experiment enrolment — it is not a reformatting of the locale string. The `SurfaceId` enum
-itself lives in `merino/curated_recommendations/corpus_backends/protocol.py`. Stratifying by locale and
-stratifying by surface are therefore not the same slice, and some surfaces are reachable only through
-enrolment. The quickest resolution is a live response: it echoes the surface it resolved to.
+region by `get_recommendation_surface_id` in `apps/merino/merino/curated_recommendations/utils.py` — it is not a
+reformatting of the locale string: English in some countries maps to `NEW_TAB_EN_ROW`, and Spanish outside
+Spain to `NEW_TAB_ES_ROW`. The `SurfaceId` enum
+itself lives in `apps/merino/merino/curated_recommendations/corpus_backends/protocol.py`. Stratifying by locale and
+stratifying by surface are therefore not the same slice. Whether a client requests stories at all is decided
+client-side by Nimbus enrolment, so a locale slice still cannot tell you who was eligible. The quickest resolution is a live response: it echoes the surface it resolved to.
 
 Merino rewrites item URLs with `utm_source=firefox-newtab-<surface-in-lower-kebab>` (`get_utm_source`
 and `update_url_utm_source` in `curated_recommendations/corpus_backends/utils.py`), so a URL from a
@@ -234,16 +233,12 @@ GCS reads above. Confirm the billing project with a `--dry_run` before the first
 `mozdata-nonprod` first, then a personal sandbox, usually `moz-fx-dev-<ldap>-sandbox`. Anything missing there is an access task, and
 authenticating is interactive so it belongs to the developer.
 
-Corpus, section and crawl state:
+Crawl state (corpus and section state is under Snowplow below):
 
 | Table | What it is for |
 |---|---|
 | `moz-fx-mozsoc-ml-prod.prod_rss_news.rss_feed_items` | Articles discovered by crawl — per-surface, per-source (`PAGE` vs `RSS`) volume over time |
 | `moz-fx-mozsoc-ml-prod.prod_articles.zyte_cache` | Hydrated article metadata — what the pipeline believes an article says. Not unique per url; see the traps below before counting or joining it |
-| `moz-fx-data-shared-prod.snowflake_migration_derived.sections_v1` | Section existence, enable/disable state, and surface, as an event stream |
-| `moz-fx-data-shared-prod.snowflake_migration_derived.section_items_v1` | Which items sit in which section, and when each was last touched — the freshness check for a stalled section |
-| `moz-fx-data-shared-prod.snowflake_migration_derived.corpus_items_current_v1` | One row per corpus item, deduped — but it keeps the latest row even when that row is a removal, so filter status yourself |
-| `moz-fx-data-shared-prod.snowflake_migration_derived.scheduled_corpus_items` | Scheduled items; one row per item in practice. Nearly every market has moved from scheduled items to sections, so thin or absent scheduling is the migration rather than a fault — check whether the surface still schedules at all before reading anything into it |
 
 Client-side telemetry, which is the only plane that answers "how many users" and the only one carrying
 experiment branch or browser version:
@@ -304,6 +299,30 @@ Traps that will silently give you a wrong answer:
 - **Volume is strongly day-of-week seasonal.** Compare against a trailing median, never against
   yesterday.
 
+#### Snowplow: corpus and section events
+
+Corpus and section state in BigQuery comes from Snowplow, not from a database replica. In
+`content-monorepo`, `curated-corpus-api` emits a Snowplow `object_update`
+event for every editorial or ML change. Each event carries an entity context: `reviewed_corpus_item`,
+`scheduled_corpus_item`, `section` or `section_item`. The events go through the collector
+into `moz-fx-data-shared-prod.snowplow_external.events`, which most people cannot read. The
+`bqetl_content_ml_hourly` DAG in `bigquery-etl` runs at :30 past every hour and models those events into
+`snowflake_migration_derived`. The name is historical: these models ran in dbt on Snowflake until 2025.
+The tables record what curators and the ML pipeline did to the corpus. They hold no user engagement;
+that is the telemetry tables above. Data starts at 2024-09-19.
+
+| Table | What it is for |
+|---|---|
+| `moz-fx-data-shared-prod.snowflake_migration_derived.sections_v1` | Section existence, enable/disable state, and surface, as an event stream |
+| `moz-fx-data-shared-prod.snowflake_migration_derived.section_items_v1` | Which items sit in which section, and when each was last touched — the freshness check for a stalled section |
+| `moz-fx-data-shared-prod.snowflake_migration_derived.corpus_items_current_v1` | One row per corpus item, deduped — but it keeps the latest row even when that row is a removal, so filter status yourself |
+| `moz-fx-data-shared-prod.snowflake_migration_derived.scheduled_corpus_items` | Legacy scheduled items; one row per item in practice. No market has served scheduled items since 2026-09 — every one moved to sections — so new rows are not expected and their absence is not a fault |
+| `moz-fx-data-shared-prod.snowflake_migration_derived.stg_reviewed_corpus_items_v1` | One row per reviewed-item event (approve, update, remove, reject), the closest thing to the raw stream you can read |
+
+If one of these tables looks stale, check the DAG run first, then whether the emitting service is
+still sending events, before concluding that nothing changed. `snowplow_events_20230627_to_20240918` in
+the same dataset is a frozen pre-2024-09-19 snapshot, not a live feed.
+
 ### Curated corpus MySQL
 
 Production database behind curated-corpus-api, reached through a preconfigured read-only login path.
@@ -332,7 +351,7 @@ access or VPN — it fires on the first aggregate over `SectionItem`. Lift the e
 Schema `curation_corpus`. The tables that matter: `ApprovedItem` (the corpus itself, keyed by
 `externalId` and `url`), `SectionItem` and `Section` (placement and section config — `Section` also
 carries `createSource` / `updateSource` / `deactivateSource`, the authoritative ML-vs-manual
-ownership), `ScheduledItem` (surface scheduling, largely superseded by sections, and its `scheduledDate`
+ownership), `ScheduledItem` (surface scheduling, fully superseded by sections and historical only; its `scheduledDate`
 is a zoneless calendar date in the surface's own timezone), `RejectedCuratedCorpusItem`, and the `PublisherDomain` / `TrustedDomain` /
 `ExcludedDomain` domain lists. `SectionItem` runs into the millions of rows and `ApprovedItem` into the
 hundreds of thousands — check indexes with `SHOW INDEX` before filtering, since several obvious filter
@@ -353,13 +372,12 @@ content-monorepo infrastructure runs in AWS. Discover profiles with
 against dev to the environment you are investigating.
 
 **The ML-to-corpus handoff is a queue, and it is where a day's candidates go missing quietly.** The
-corpus-scheduler and section-manager lambdas are each fed by SQS with concurrency of one and a batch
-size of one, and the shared construct gives each queue a dead-letter queue named after it. Check queue
+section-manager lambda is fed by SQS with concurrency of one and a batch size of one, and the shared
+construct gives its queue a dead-letter queue named after it. Check queue
 depth, in-flight count, oldest-message age, and DLQ depth before concluding that ML produced nothing:
 a backlog and a drained DLQ look identical in every corpus table. Two mechanics worth knowing: a
 message whose handler outlives the queue's visibility timeout is redelivered while still in flight and
-can exhaust its receive count without any error being raised, and the write path is gated by an
-`ALLOWED_TO_SCHEDULE` flag that makes the lambda return normally while writing nothing. ML also has one
+can exhaust its receive count without any error being raised. ML also has one
 path that bypasses the queue and calls admin-api directly, so do not describe the handoff as
 queue-only.
 
@@ -469,10 +487,15 @@ one message is what the `mcp__slack__` tools are for here; the rule is under "Po
 
 ## Access requests
 
-Raise one of these when the source looks promising, then keep working. Give the command, not a
+Raise these as soon as you can tell you will need them, usually at the start of the investigation, then keep working. Give the command, not a
 description of the problem.
 
-**How to ask.** Put the errand on the todo list, one item per step, each prefixed `User action:` so it
+**How to ask.** End each message with the open asks under a **User action needed** heading, so they
+are the last thing on screen rather than buried in progress notes, and repeat them until each is
+done. Send one `PushNotification` per batch, not per item, leading with the action, e.g.
+`investigation blocked: run gcloud auth login so BigQuery is reachable`. It is a deferred tool, so
+load it with ToolSearch first. It skips itself when the developer is watching, so sending it costs
+nothing. Use one item per step, each prefixed `User action:` so it
 reads as theirs rather than yours, with the whole instruction in the item text. The commands below run
 in the developer's own shell, so say **"in a new terminal"** rather than expecting them to run inside
 this session. Where the fix changes which tools Claude Code has — installing an MCP server, exporting
@@ -483,8 +506,7 @@ User action: restart Claude Code in this directory with `claude --continue`, whi
 session back up where it left off
 ```
 
-Then carry on. The items stay pending and visible while you work; close them when they land, and delete
-any whose line stopped mattering.
+Then carry on. Drop items from the block as they land, along with any whose line stopped mattering.
 
 Roughly ordered by how often an investigation needs them, and how quickly they are resolved.
 
